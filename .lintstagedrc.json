@@ -1,0 +1,4 @@
+{
+  "**/*.ts": ["yarn lint:fix", "yarn format"],
+  "**/*.{json,md,mdx}": ["yarn format"]
+}

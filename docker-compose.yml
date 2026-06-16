@@ -1,0 +1,39 @@
+services:
+  localstack:
+    container_name: 'localstack_dnd-core'
+    image: localstack/localstack-pro:latest
+    ports:
+      - '127.0.0.1:4566:4566' # LocalStack Gateway
+      - '127.0.0.1:4510-4559:4510-4559' # External services port range
+    environment:
+      - DEBUG=${DEBUG-}
+      - HOST_LAMBDA_DIR=${PWD}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
+
+    networks:
+      - localnet
+    volumes:
+      - '${LOCALSTACK_VOLUME_DIR:-./volume/localstack}:/var/lib/localstack'
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - '${PWD}:/workspace'
+
+  postgres:
+    container_name: 'postgres_dnd-core_db'
+    image: postgres:latest
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: dnd-core
+    networks:
+      - localnet
+    depends_on:
+      - localstack
+
+networks:
+  localnet:
+    name: localnet
+    driver: bridge
+    external: true
