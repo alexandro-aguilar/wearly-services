@@ -266,6 +266,31 @@ Some current scripts still reference older paths such as `app/` while source fil
 - When unsure whether to follow current code or the handoff, favor the handoff for new Wearly features and mention any migration impact.
 - Before finishing, run the most relevant tests, lint, or type checks that are available and report anything that could not be run.
 
+## Development workflow
+
+Before implementing any code change:
+
+1. Read the current specification from `docs/specs/`.
+2. Use Graphify to analyze the repository.
+3. Identify:
+   - impacted modules
+   - dependencies
+   - existing patterns
+   - related tests
+
+Do not modify code before understanding the dependency graph.
+
+Implementation flow:
+- Use Graphify for impact analysis
+- Create a change plan
+- Follow TDD with the red, green, blue cycle:
+  - Red: write or update a failing test that describes the intended behavior or bug fix.
+  - Green: make the test pass with the smallest production code change.
+  - Blue: refactor for clarity, design, and maintainability while keeping tests green.
+- Modify the smallest possible surface area
+- Add edge-case tests for invalid input, permissions, store isolation, and money/quantity calculations where relevant
+- Verify the change
+
 ## graphify
 
 This project has a graphify knowledge graph at graphify-out/.
