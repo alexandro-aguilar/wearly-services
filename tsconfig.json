@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "paths": {
-      "@src/*": ["./app/src/*"],
-      "@tests/*": ["./app/tests/*"],
+      "@src/*": ["./src/*", "./src/app/*"],
+      "@tests/*": ["./tests/*"],
       "@root/*": ["./*"]
     },
     "target": "ES2022",

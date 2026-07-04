@@ -1,6 +1,6 @@
 services:
   localstack:
-    container_name: 'localstack_dnd-core'
+    container_name: 'localstack_wearly-services'
     image: localstack/localstack-pro:latest
     ports:
       - '127.0.0.1:4566:4566' # LocalStack Gateway
@@ -19,14 +19,14 @@ services:
       - '${PWD}:/workspace'
 
   postgres:
-    container_name: 'postgres_dnd-core_db'
+    container_name: 'postgres_wearly_services_db'
     image: postgres:latest
     ports:
       - '5432:5432'
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: dnd-core
+      POSTGRES_DB: wearly_services
     networks:
       - localnet
     depends_on:

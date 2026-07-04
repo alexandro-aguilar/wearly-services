@@ -1,4 +1,4 @@
-# D&D Character Builder ER Diagram
+# Wearly Services Legacy ER Diagram
 
 ```mermaid
 erDiagram

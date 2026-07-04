@@ -1,6 +1,6 @@
-# dnd-terraform
+# Wearly Services
 
-Infrastructure-as-code sandbox for a serverless app made of multiple AWS Lambda functions behind an API Gateway HTTP API. Lambdas are authored in TypeScript, compiled to `.bin`, and deployed via Terraform either to LocalStack or AWS.
+Backend services and infrastructure for the Wearly clothing retail POS. The current repository includes serverless TypeScript infrastructure for AWS Lambda functions behind an API Gateway HTTP API, deployed locally through LocalStack or to AWS.
 
 ## Dependencies
 
@@ -13,7 +13,7 @@ Infrastructure-as-code sandbox for a serverless app made of multiple AWS Lambda 
 
 ## Project layout
 
-- `app/`: Lambda source organized by module. Output JS files land in `app/.bin/**/index.js`.
+- `src/`: TypeScript source organized by module.
 - `esbuild.ts`: Builds/compiles Lambdas into `.bin`.
 - `terraform/`: Terraform stack that wires Lambdas, IAM, and API Gateway (see its README for more detail).
 

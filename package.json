@@ -1,15 +1,17 @@
 {
-  "name": "dnd-terraform",
+  "name": "wearly-services",
   "packageManager": "yarn@4.9.2",
   "scripts": {
     "format": "prettier --write .",
-    "lint": "yarn eslint ./app",
-    "lint:fix": "eslint ./app --fix",
+    "lint": "eslint ./src",
+    "lint:fix": "eslint ./src --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "tflint": "tflint",
     "build": "ts-node esbuild.ts",
     "build:local": "ts-node esbuild.ts --watch",
     "prepare": "husky",
-    "localstack": "docker ps -aq --filter name=localstack_dnd-core | xargs docker stop && docker ps -aq --filter name=localstack_dnd-core | xargs docker rm && docker-compose up",
+    "localstack": "docker ps -aq --filter name=localstack_wearly-services | xargs docker stop && docker ps -aq --filter name=localstack_wearly-services | xargs docker rm && docker-compose up",
     "tf:init": "terraform -chdir=terraform init -input=false",
     "tf:init:local": "terraform -chdir=terraform init -input=false -reconfigure",
     "tf:plan": "terraform -chdir=terraform plan",
@@ -47,8 +49,8 @@
     "workspace:list": "terraform -chdir=terraform workspace list",
     "generate:local": "drizzle-kit generate",
     "migrate:local": "drizzle-kit migrate",
-    "seed:local": "ts-node app/src/core/infrastructure/database/seed.ts seed",
-    "clean:local": "ts-node app/src/core/infrastructure/database/seed.ts clean",
+    "seed:local": "ts-node src/app/core/infrastructure/database/seed.ts seed",
+    "clean:local": "ts-node src/app/core/infrastructure/database/seed.ts clean",
     "create:cognito-user": "bash scripts/signUpAndConfirmCognitoUser.sh"
   },
   "devDependencies": {
@@ -56,7 +58,6 @@
     "@commitlint/config-conventional": "^20.0.0",
     "@eslint/js": "^9.37.0",
     "@types/aws-lambda": "^8.10.156",
-    "@types/dotenv": "^8.2.3",
     "@types/hapi__joi": "^17.1.15",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.9.1",
@@ -87,7 +88,8 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.2"
+    "typescript-eslint": "^8.46.2",
+    "vitest": "^4.1.9"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "^2.27.0",
@@ -95,10 +97,12 @@
     "@aws-lambda-powertools/tracer": "^2.27.0",
     "@aws-sdk/client-s3": "^3.921.0",
     "@aws-sdk/s3-request-presigner": "^3.921.0",
+    "@fastify/aws-lambda": "^6.4.0",
     "@hapi/joi": "^17.1.1",
     "@middy/core": "^6.4.5",
     "drizzle-kit": "^0.31.7",
     "drizzle-orm": "^0.44.7",
+    "fastify": "^5.8.5",
     "inversify": "^7.10.3",
     "openai": "^6.5.0",
     "pg": "^8.16.3",

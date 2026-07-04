@@ -7,12 +7,12 @@ import fg from 'fast-glob';
 import { LogLevel } from 'esbuild';
 
 async function main() {
-  const entryPoints = await fg('app/**/interface/handlers/*Handler.ts');
+  const entryPoints = await fg('src/**/presentation/handlers/*Handler.ts');
   const isWatchMode = process.argv.includes('--watch');
   console.log(`isWatchMode: ${isWatchMode}`);
 
   if (!entryPoints || entryPoints.length === 0) {
-    console.log('No lambda handler TypeScript files found in app/.');
+    console.log('No lambda handler TypeScript files found in src/.');
     process.exit(0);
   }
 
@@ -27,7 +27,7 @@ async function main() {
     entryPoints: entryPointsMap,
     bundle: true,
     platform: 'node' as const,
-    target: 'node22',
+    target: 'node24',
     outdir: './.dist',
     minify: false,
     sourcemap: isWatchMode,
@@ -35,8 +35,8 @@ async function main() {
     plugins: [
       // nodeExternalsPlugin({ packagePath: './package.json' }),
       alias({
-        '@src': resolve(__dirname, 'app/src'),
-        '@tests': resolve(__dirname, 'app/tests'),
+        '@src': resolve(__dirname, 'src'),
+        '@tests': resolve(__dirname, 'tests'),
         '@root': resolve(__dirname, '.'),
       }),
     ],

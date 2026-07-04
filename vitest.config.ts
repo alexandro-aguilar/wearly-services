@@ -1,0 +1,15 @@
+import { defineConfig } from 'vitest/config';
+import { resolve } from 'path';
+
+export default defineConfig({
+  test: {
+    globals: false,
+  },
+  resolve: {
+    alias: {
+      '@src': resolve(__dirname, 'src'),
+      '@tests': resolve(__dirname, 'tests'),
+      '@root': resolve(__dirname, '.'),
+    },
+  },
+});

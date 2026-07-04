@@ -17,7 +17,7 @@ The backend must support:
 - Daily reporting
 - Multi-store isolation through `storeId`
 
-This repository currently contains inherited TypeScript serverless infrastructure, including AWS Lambda/Middy helpers, Drizzle/PostgreSQL setup, Terraform scripts, and some legacy DnD naming. When adding new Wearly code, prefer the Wearly domain model and target architecture described below over legacy naming.
+This repository currently contains inherited TypeScript serverless infrastructure, including AWS Lambda/Middy helpers, Drizzle/PostgreSQL setup, Terraform scripts, and some legacy project naming. When adding new Wearly code, prefer the Wearly domain model and target architecture described below over legacy naming.
 
 ## Technology Direction
 
@@ -262,7 +262,7 @@ Some current scripts still reference older paths such as `app/` while source fil
 - Keep edits scoped to the requested feature.
 - Prefer adding tests before production code for domain behavior.
 - Do not introduce new framework dependencies without a clear reason.
-- Do not put Wearly business logic in legacy DnD-named modules.
+- Do not put Wearly business logic in legacy-named modules.
 - When unsure whether to follow current code or the handoff, favor the handoff for new Wearly features and mention any migration impact.
 - Before finishing, run the most relevant tests, lint, or type checks that are available and report anything that could not be run.
 

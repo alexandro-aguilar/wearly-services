@@ -789,7 +789,7 @@ async function main() {
       try {
         await clean(db);
         await seed(db);
-        console.log('Database seeded with D&D 5e sample data.');
+        console.log('Database seeded with Wearly Services sample data.');
       } catch (error) {
         console.error('Failed to seed database', error);
         process.exitCode = 1;
