@@ -213,6 +213,28 @@ Presentation handlers should:
 - Convert domain/application errors into appropriate HTTP errors.
 - Avoid business logic in route handlers.
 
+Interface layer Lambda handlers should follow the existing Middy composition pattern when maintaining Lambda-based code:
+
+- Each Lambda file exports exactly one `handler`; a Lambda must not expose multiple handlers from the same entrypoint.
+- Compose the handler with `middy(async (event, context) => { ... })` and attach middleware with `.use(...)`.
+- Resolve controllers and cross-cutting services from the dependency injection container at the interface boundary.
+- Add request context to the logger, including the AWS request ID from `context.awsRequestId`.
+- Delegate business work to a controller or application handler; the Lambda handler should only adapt the event/context and return the controller response.
+- Validate input with a colocated schema file such as `inputGetAbilitySchema`, typed as `ValidatorSchemas`, and pass it to `requestValidator(schema)`.
+- Apply middleware in the established order: request validation, request handling/metrics context, Powertools `logMetrics`, Powertools `captureLambdaHandler`, and response handling.
+- Keep schema definitions in the interface layer and use Joi objects for `pathParameters`, `queryStringParameters`, and `body` validation where applicable.
+- Keep DTOs explicit in handler return types and do not return persistence records directly.
+
+Catalog endpoint handler template:
+
+- Use `src/app/modules/catalog/presentation/handlers/CreateProductEndpointHandler.ts` as the canonical template for Lambda-backed catalog endpoints.
+- Catalog Lambdas are independent entrypoints. Do not route catalog requests through `CatalogPresentationHandlers`, `buildCatalogPresentationModule`, `.handle()` adapter classes, or shared presentation aggregators.
+- Each catalog handler file should export only `handler` and should not export endpoint classes.
+- Keep a colocated `const <operation>EndpointHandlerSchema: ValidatorSchemas` in the handler file, using Joi objects for the Lambda boundary.
+- Resolve `TracerService`, `MetricsService`, `Logger`, and the operation's application handler from `src/app/modules/catalog/config/container.ts` at module scope, as shown in the create-product handler.
+- In the Lambda `handler`, add `{ requestId: context.awsRequestId }` to the logger, derive the authenticated principal from the `Authorization` header, parse the validated event body or read validated path/query parameters, call the application handler, and return the application response or a stable response DTO.
+- Apply middleware in this exact order: `requestValidator(schema)`, `requestHandler(metrics)`, `logMetrics(...)`, `captureLambdaHandler(tracer)`, `responseHandler()`.
+
 ## Persistence
 
 PostgreSQL is the database. The handoff targets Prisma, while the current repository has Drizzle scaffolding. Do not mix persistence approaches inside the same feature without an explicit migration decision.
@@ -281,6 +303,7 @@ Before implementing any code change:
 Do not modify code before understanding the dependency graph.
 
 Implementation flow:
+
 - Use Graphify for impact analysis
 - Create a change plan
 - Follow TDD with the red, green, blue cycle:
@@ -296,6 +319,7 @@ Implementation flow:
 This project has a graphify knowledge graph at graphify-out/.
 
 Rules:
+
 - Before answering architecture or codebase questions, read graphify-out/GRAPH_REPORT.md for god nodes and community structure
 - If graphify-out/wiki/index.md exists, navigate it instead of reading raw files
 - After modifying code files in this session, run `graphify update .` to keep the graph current (AST-only, no API cost)
