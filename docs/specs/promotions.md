@@ -45,11 +45,7 @@ type PromotionCondition = {
 
 ```ts
 type PromotionAction = {
-  type:
-    | 'SET_FIXED_PRICE'
-    | 'PERCENTAGE_DISCOUNT'
-    | 'FIXED_DISCOUNT'
-    | 'CHEAPEST_ITEM_DISCOUNT';
+  type: 'SET_FIXED_PRICE' | 'PERCENTAGE_DISCOUNT' | 'FIXED_DISCOUNT' | 'CHEAPEST_ITEM_DISCOUNT';
   value: number;
 };
 ```

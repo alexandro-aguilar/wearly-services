@@ -22,4 +22,3 @@ Include correlation IDs in request handling and propagate useful operational con
 - Logs must not include secrets, bearer tokens, payment card data, or sensitive customer data.
 - Metrics should include request count, latency, errors, checkout completions and failures, promotion applications, and inventory adjustments.
 - Traces should cover request handling, command/query execution, repository calls, transaction boundaries, and AWS service calls.
-

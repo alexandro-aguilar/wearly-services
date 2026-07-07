@@ -25,4 +25,3 @@ Do not mix Prisma and Drizzle inside the same feature without an explicit migrat
 - Database constraints enforce uniqueness and referential integrity.
 - Business explanations remain in domain and application errors rather than raw database errors.
 - Existing Drizzle infrastructure can remain for legacy code until migrated.
-

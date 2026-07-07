@@ -38,4 +38,3 @@ Queries read state and return projections. Examples:
 - Commands load aggregates through repository ports and call domain behavior.
 - Queries may use optimized read repositories or projections when useful.
 - Cross-context workflows are coordinated by application services or domain events.
-

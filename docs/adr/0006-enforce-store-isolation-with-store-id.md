@@ -24,4 +24,3 @@ The authenticated store context is authoritative. Client-provided store values m
 - Duplicate checks such as SKU or barcode uniqueness are store-scoped.
 - Resource-not-in-store should normally be treated as not found.
 - Cross-store reporting is out of MVP scope unless explicitly authorized.
-

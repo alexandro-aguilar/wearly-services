@@ -30,4 +30,3 @@ Represent eligibility and effects through configurable conditions and actions.
 - Promotions do not directly mutate catalog, inventory, or sales state.
 - Promotion data must be scoped by `storeId`, active dates, priority, and active state.
 - Edge cases need focused unit tests before broad integration tests.
-

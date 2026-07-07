@@ -23,4 +23,3 @@ This folder records architecture decisions for Wearly Services.
 - [0008 - Use Vitest For New Wearly Tests](./0008-use-vitest-for-new-wearly-tests.md)
 - [0009 - Use AWS CDK For Target Infrastructure](./0009-use-aws-cdk-for-target-infrastructure.md)
 - [0010 - Use Structured Observability With AWS Lambda Powertools](./0010-use-structured-observability-with-aws-lambda-powertools.md)
-

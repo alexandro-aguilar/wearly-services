@@ -23,4 +23,3 @@ Default to test-first development for business behavior.
 - Integration tests cover persistence adapters and HTTP routes when infrastructure is involved.
 - Promotion engine tests are high priority.
 - Existing Jest tests may remain until an explicit migration plan replaces them.
-

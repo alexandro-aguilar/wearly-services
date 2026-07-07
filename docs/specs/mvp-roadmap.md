@@ -118,4 +118,3 @@ Acceptance:
 - Unauthenticated requests fail.
 - Unauthorized mutations fail.
 - Store isolation is enforced for every endpoint.
-

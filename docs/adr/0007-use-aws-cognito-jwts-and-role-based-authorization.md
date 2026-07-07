@@ -29,4 +29,3 @@ Authenticate at the presentation boundary. Authorize mutations in application se
 - Application code receives an authenticated principal and store context, not raw token claims.
 - Role and store context come from trusted auth mapping.
 - Sensitive operations such as promotion management, inventory adjustment, and sale cancellation need explicit policy checks.
-

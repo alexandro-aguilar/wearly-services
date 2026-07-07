@@ -29,4 +29,3 @@ When deployed to AWS Lambda, use a Fastify Lambda adapter.
 - Route handlers return stable response DTOs.
 - Domain and application layers remain framework-independent.
 - OpenAPI documentation should be generated or maintained from the Fastify route boundary.
-

@@ -22,4 +22,3 @@ Keep existing Terraform and LocalStack workflows operational while they are stil
 - Infrastructure code can share TypeScript conventions with the application.
 - Terraform should not be expanded for new Wearly target infrastructure unless a migration decision changes this ADR.
 - Migration work must account for existing scripts and deployment workflows.
-
