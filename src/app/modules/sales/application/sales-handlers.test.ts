@@ -6,6 +6,7 @@ import {
   SaleRepository,
   SalesCatalogGateway,
   SalesInventoryGateway,
+  SalesPromotionGateway,
 } from '@src/app/modules/sales/application/ports/SalesRepositories';
 import { SalesClock, SalesIdGenerator } from '@src/app/modules/sales/application/ports/SalesServices';
 import { GetSaleByIdHandler } from '@src/app/modules/sales/application/queries/GetSaleByIdHandler';
@@ -67,6 +68,31 @@ describe('sales checkout handlers', () => {
     const sale = await sales.getById.execute(cashier('store-a'), 'sale-1');
     expect(sale.items).toEqual([expect.objectContaining({ productVariantId: 'variant-1', quantity: 3, total: 60 })]);
     expect(sales.inventory.stockOf('store-a', 'variant-1')).toBe(0);
+  });
+
+  it('automatically applies promotion discounts returned by the promotion context', async () => {
+    const promotionGateway: SalesPromotionGateway = {
+      evaluate: async (_storeId, _at, items) =>
+        items.map((item) => ({ productVariantId: item.productVariantId, discount: 50 })),
+    };
+    const sales = buildSalesHarness(
+      [variant({ id: 'variant-1', storeId: 'store-a', price: 250, stock: 2 })],
+      promotionGateway
+    );
+
+    await sales.complete.execute(cashier('store-a'), {
+      items: [{ productVariantId: 'variant-1', quantity: 1 }],
+      paymentMethod: 'CASH',
+      discount: 999,
+      total: 0,
+    });
+
+    await expect(sales.getById.execute(cashier('store-a'), 'sale-1')).resolves.toMatchObject({
+      subtotal: 250,
+      discount: 50,
+      total: 200,
+      items: [expect.objectContaining({ discount: 50, total: 200 })],
+    });
   });
 
   it('rejects insufficient stock without persisting partial checkout changes', async () => {
@@ -173,7 +199,14 @@ class FakeCatalogGateway implements SalesCatalogGateway {
     const found = this.variants.find(
       (variant) => variant.storeId === storeId && variant.id === productVariantId && variant.active
     );
-    return found ? { productVariantId: found.id, unitPrice: found.price } : undefined;
+    return found
+      ? {
+          productVariantId: found.id,
+          productId: `${found.id}-product`,
+          category: 'default',
+          unitPrice: found.price,
+        }
+      : undefined;
   }
 }
 
@@ -267,7 +300,7 @@ class SequentialSalesIdGenerator implements SalesIdGenerator {
   }
 }
 
-function buildSalesHarness(variants: VariantRecord[]) {
+function buildSalesHarness(variants: VariantRecord[], promotions?: SalesPromotionGateway) {
   const catalog = new FakeCatalogGateway(variants);
   const inventory = new FakeInventoryGateway(variants);
   const repository = new FakeSaleRepository();
@@ -277,7 +310,16 @@ function buildSalesHarness(variants: VariantRecord[]) {
   const ids = new SequentialSalesIdGenerator();
 
   return {
-    complete: new CompleteSaleHandler(catalog, inventory, repository, transaction, authorization, clock, ids),
+    complete: new CompleteSaleHandler(
+      catalog,
+      inventory,
+      repository,
+      transaction,
+      authorization,
+      clock,
+      ids,
+      promotions
+    ),
     getById: new GetSaleByIdHandler(repository, authorization),
     list: new ListSalesHandler(repository, authorization),
     inventory,

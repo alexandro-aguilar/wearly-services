@@ -2,6 +2,9 @@ import { SaleSnapshot } from '@src/app/modules/sales/domain/Sale';
 
 export interface SalesCatalogVariant {
   readonly productVariantId: string;
+  readonly productId: string;
+  readonly category: string;
+  readonly brand?: string;
   readonly unitPrice: number;
 }
 
@@ -22,4 +25,12 @@ export interface SaleRepository {
 
 export interface CheckoutTransactionManager {
   execute<T>(work: () => Promise<T>): Promise<T>;
+}
+
+export interface SalesPromotionGateway {
+  evaluate(
+    storeId: string,
+    at: Date,
+    items: readonly (SalesCatalogVariant & { readonly quantity: number })[]
+  ): Promise<readonly { productVariantId: string; discount: number }[]>;
 }

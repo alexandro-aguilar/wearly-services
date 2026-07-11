@@ -3,6 +3,7 @@ import {
   SaleRepository,
   SalesCatalogGateway,
   SalesInventoryGateway,
+  SalesPromotionGateway,
 } from '@src/app/modules/sales/application/ports/SalesRepositories';
 import {
   SalesAuthorizationPolicy,
@@ -34,6 +35,11 @@ export interface CompleteSaleResult {
   readonly status: 'COMPLETED';
 }
 
+const noPromotions: SalesPromotionGateway = {
+  evaluate: async (_storeId, _at, items) =>
+    items.map((item) => ({ productVariantId: item.productVariantId, discount: 0 })),
+};
+
 export class CompleteSaleHandler {
   constructor(
     private readonly catalog: SalesCatalogGateway,
@@ -42,7 +48,8 @@ export class CompleteSaleHandler {
     private readonly transaction: CheckoutTransactionManager,
     private readonly authorization: SalesAuthorizationPolicy,
     private readonly clock: SalesClock,
-    private readonly ids: SalesIdGenerator
+    private readonly ids: SalesIdGenerator,
+    private readonly promotions: SalesPromotionGateway = noPromotions
   ) {}
 
   async execute(principal: AuthenticatedPrincipal, command: CompleteSaleCommand): Promise<CompleteSaleResult> {
@@ -63,16 +70,23 @@ export class CompleteSaleHandler {
           if (stock < item.quantity) {
             throw new ValidationError(`Insufficient stock for product variant ${item.productVariantId}.`);
           }
-          return { ...item, unitPrice: variant.unitPrice, discount: 0 };
+          return { ...variant, quantity: item.quantity };
         })
       );
       const now = this.clock.now();
+      const evaluatedDiscounts = await this.promotions.evaluate(principal.storeId, now, pricedItems);
+      const discounts = new Map(evaluatedDiscounts.map((item) => [item.productVariantId, item.discount]));
       const sale = Sale.complete({
         id: this.ids.nextId('sale'),
         storeId: principal.storeId,
         customerId: command.customerId,
         paymentMethod: command.paymentMethod,
-        items: pricedItems,
+        items: pricedItems.map((item) => ({
+          productVariantId: item.productVariantId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          discount: discounts.get(item.productVariantId) ?? 0,
+        })),
         tax: 0,
         createdAt: now,
       });

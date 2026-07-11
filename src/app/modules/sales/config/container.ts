@@ -1,7 +1,11 @@
 import { Container } from 'inversify';
-import { ProductVariantRepository } from '@src/app/modules/catalog/application/ports/CatalogRepositories';
+import {
+  ProductRepository,
+  ProductVariantRepository,
+} from '@src/app/modules/catalog/application/ports/CatalogRepositories';
 import { InMemoryCatalogStore } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryCatalogStore';
 import { InMemoryProductVariantRepository } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryProductVariantRepository';
+import { InMemoryProductRepository } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryProductRepository';
 import ILogger from '@src/app/core/utils/ILogger';
 import MetricsService from '@src/app/core/utils/MetricsService';
 import PowertoolsLoggerAdapter from '@src/app/core/utils/Logger';
@@ -19,6 +23,7 @@ import {
   SaleRepository,
   SalesCatalogGateway,
   SalesInventoryGateway,
+  SalesPromotionGateway,
 } from '@src/app/modules/sales/application/ports/SalesRepositories';
 import {
   SalesAuthorizationPolicy,
@@ -34,6 +39,9 @@ import { CatalogSalesGateway } from '@src/app/modules/sales/infrastructure/servi
 import { InMemoryCheckoutTransactionManager } from '@src/app/modules/sales/infrastructure/services/InMemoryCheckoutTransactionManager';
 import { InventorySalesGateway } from '@src/app/modules/sales/infrastructure/services/InventorySalesGateway';
 import { SystemClock } from '@src/shared/application/Clock';
+import { EvaluatePromotionsHandler } from '@src/app/modules/promotions/application/queries/EvaluatePromotionsHandler';
+import { InMemoryPromotionRepository } from '@src/app/modules/promotions/infrastructure/repositories/in-memory/InMemoryPromotionRepository';
+import { PromotionCheckoutAdapter } from '@src/app/modules/promotions/infrastructure/services/PromotionCheckoutAdapter';
 
 const container = new Container();
 
@@ -48,6 +56,12 @@ container
   .bind<ProductVariantRepository>(types.SalesProductVariantRepository)
   .toDynamicValue(
     (context) => new InMemoryProductVariantRepository(context.get<InMemoryCatalogStore>(types.SalesCatalogStore))
+  )
+  .inSingletonScope();
+container
+  .bind<ProductRepository>(types.SalesProductRepository)
+  .toDynamicValue(
+    (context) => new InMemoryProductRepository(context.get<InMemoryCatalogStore>(types.SalesCatalogStore))
   )
   .inSingletonScope();
 container
@@ -66,8 +80,16 @@ container
 container
   .bind<SalesCatalogGateway>(types.SalesCatalogGateway)
   .toDynamicValue(
-    (context) => new CatalogSalesGateway(context.get<ProductVariantRepository>(types.SalesProductVariantRepository))
+    (context) =>
+      new CatalogSalesGateway(
+        context.get<ProductVariantRepository>(types.SalesProductVariantRepository),
+        context.get<ProductRepository>(types.SalesProductRepository)
+      )
   )
+  .inSingletonScope();
+container
+  .bind<SalesPromotionGateway>(types.SalesPromotionGateway)
+  .toDynamicValue(() => new PromotionCheckoutAdapter(new EvaluatePromotionsHandler(new InMemoryPromotionRepository())))
   .inSingletonScope();
 container
   .bind<SalesInventoryGateway>(types.SalesInventoryGateway)
@@ -103,7 +125,8 @@ container
         context.get<CheckoutTransactionManager>(types.CheckoutTransactionManager),
         context.get<SalesAuthorizationPolicy>(types.SalesAuthorizationPolicy),
         context.get<SalesClock>(types.SalesClock),
-        context.get<SalesIdGenerator>(types.SalesIdGenerator)
+        context.get<SalesIdGenerator>(types.SalesIdGenerator),
+        context.get<SalesPromotionGateway>(types.SalesPromotionGateway)
       )
   )
   .inSingletonScope();
