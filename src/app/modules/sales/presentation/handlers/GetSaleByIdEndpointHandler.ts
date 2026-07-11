@@ -26,7 +26,7 @@ const logger = container.get<ILogger>(types.Logger);
 export const handler = middy(
   async (event: APIGatewayProxyEventV2, context: Context): Promise<APIGatewayProxyResultV2<{ sale: SaleSnapshot }>> => {
     logger.addContext({ requestId: context.awsRequestId });
-    const principal = new Authorization(event.headers['Authorization'] || '');
+    const principal = await Authorization.authenticate(event.headers);
     const sale = await container
       .get<GetSaleByIdHandler>(types.GetSaleByIdHandler)
       .execute(principal, event.pathParameters?.id || '');

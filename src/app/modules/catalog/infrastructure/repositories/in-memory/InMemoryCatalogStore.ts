@@ -6,6 +6,8 @@ export class InMemoryCatalogStore {
   readonly variants = new Map<string, ProductVariantSnapshot>();
 }
 
+export const sharedInMemoryCatalogStore = new InMemoryCatalogStore();
+
 export function inMemoryCatalogKey(storeId: string, id: string): string {
   return `${storeId}:${id}`;
 }

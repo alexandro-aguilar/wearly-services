@@ -31,7 +31,7 @@ export const handler = middy(
     context: Context
   ): Promise<APIGatewayProxyResultV2<{ product: ProductSnapshot }>> => {
     logger.addContext({ requestId: context.awsRequestId });
-    const authenticatedPrincipal = new Authorization(event.headers['Authorization'] || '');
+    const authenticatedPrincipal = await Authorization.authenticate(event.headers);
     const getProductByIdHandler = container.get<GetProductByIdHandler>(types.GetProductByIdHandler);
     const response = await getProductByIdHandler.execute(authenticatedPrincipal, event.pathParameters?.id || '');
 

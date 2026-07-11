@@ -44,7 +44,7 @@ export const handler = middy(
     const body = (typeof event.body === 'string' ? JSON.parse(event.body) : event.body) as UpdateCustomerCommand & {
       active?: false;
     };
-    const principal = new Authorization(event.headers['Authorization'] || '');
+    const principal = await Authorization.authenticate(event.headers);
     const id = event.pathParameters?.id || '';
     const { active, ...command } = body;
     if (Object.keys(command).length > 0) {

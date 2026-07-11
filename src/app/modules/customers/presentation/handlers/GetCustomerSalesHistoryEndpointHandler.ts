@@ -29,7 +29,7 @@ export const handler = middy(
     context: Context
   ): Promise<APIGatewayProxyResultV2<{ sales: CustomerSaleHistoryItem[] }>> => {
     logger.addContext({ requestId: context.awsRequestId });
-    const principal = new Authorization(event.headers['Authorization'] || '');
+    const principal = await Authorization.authenticate(event.headers);
     const sales = await container
       .get<GetCustomerSalesHistoryHandler>(types.GetCustomerSalesHistoryHandler)
       .execute(principal, event.pathParameters?.id || '');

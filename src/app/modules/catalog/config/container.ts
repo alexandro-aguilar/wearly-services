@@ -24,7 +24,10 @@ import {
   ProductRepository,
   ProductVariantRepository,
 } from '@src/app/modules/catalog/application/ports/CatalogRepositories';
-import { InMemoryCatalogStore } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryCatalogStore';
+import {
+  InMemoryCatalogStore,
+  sharedInMemoryCatalogStore,
+} from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryCatalogStore';
 import { InMemoryProductRepository } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryProductRepository';
 import { InMemoryProductVariantRepository } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryProductVariantRepository';
 import ILogger from '@src/app/core/utils/ILogger';
@@ -41,7 +44,7 @@ container
   .inSingletonScope();
 container.bind<CatalogClock>(types.CatalogClock).to(SystemClock).inSingletonScope();
 container.bind<IdGenerator>(types.CatalogIdGenerator).to(CryptoIdGenerator).inSingletonScope();
-container.bind<InMemoryCatalogStore>(types.CatalogStore).to(InMemoryCatalogStore).inSingletonScope();
+container.bind<InMemoryCatalogStore>(types.CatalogStore).toConstantValue(sharedInMemoryCatalogStore);
 container
   .bind<ProductRepository>(types.ProductRepository)
   .toDynamicValue((context) => new InMemoryProductRepository(context.get<InMemoryCatalogStore>(types.CatalogStore)))

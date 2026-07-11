@@ -29,7 +29,7 @@ export const handler = middy(
   async (event: APIGatewayProxyEventV2, context: Context): Promise<APIGatewayProxyResultV2<{ id: string }>> => {
     logger.addContext({ requestId: context.awsRequestId });
     const adjustInventoryCommand = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
-    const authenticatedPrincipal = new Authorization(event.headers['Authorization'] || '');
+    const authenticatedPrincipal = await Authorization.authenticate(event.headers);
     const adjustInventoryHandler = container.get<AdjustInventoryHandler>(types.AdjustInventoryHandler);
 
     return adjustInventoryHandler.execute(authenticatedPrincipal, adjustInventoryCommand);

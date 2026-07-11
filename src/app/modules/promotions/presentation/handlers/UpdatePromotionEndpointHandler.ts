@@ -45,7 +45,7 @@ export const handler = middy(
       startsAt: body.startsAt === null ? null : body.startsAt ? new Date(body.startsAt) : undefined,
       endsAt: body.endsAt === null ? null : body.endsAt ? new Date(body.endsAt) : undefined,
     };
-    const principal = new Authorization(event.headers['Authorization'] || '');
+    const principal = await Authorization.authenticate(event.headers);
     await container
       .get<UpdatePromotionHandler>(types.UpdatePromotionHandler)
       .execute(principal, event.pathParameters?.id || '', command);

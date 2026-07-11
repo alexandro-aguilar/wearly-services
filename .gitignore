@@ -53,7 +53,7 @@ volume/
 # Terraform artifacts
 .terraform/
 terraform/.terraform/
-terraform/.terraform.lock.hcl
+terraform/.build/
 terraform/terraform.tfvars
 terraform/*.tfstate
 terraform/*.tfstate.backup

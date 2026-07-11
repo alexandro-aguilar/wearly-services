@@ -33,7 +33,7 @@ export const handler = middy(
     context: Context
   ): Promise<APIGatewayProxyResultV2<{ customers: CustomerSnapshot[] }>> => {
     logger.addContext({ requestId: context.awsRequestId });
-    const principal = new Authorization(event.headers['Authorization'] || '');
+    const principal = await Authorization.authenticate(event.headers);
     const search = event.queryStringParameters?.search;
     const customers = search
       ? await container.get<SearchCustomersHandler>(types.SearchCustomersHandler).execute(principal, search)

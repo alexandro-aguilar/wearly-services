@@ -1,0 +1,73 @@
+import { Container } from 'inversify';
+import { ProductVariantRepository } from '@src/app/modules/catalog/application/ports/CatalogRepositories';
+import { sharedInMemoryCatalogStore } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryCatalogStore';
+import { InMemoryProductVariantRepository } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryProductVariantRepository';
+import ILogger from '@src/app/core/utils/ILogger';
+import MetricsService from '@src/app/core/utils/MetricsService';
+import PowertoolsLoggerAdapter from '@src/app/core/utils/Logger';
+import TracerService from '@src/app/core/utils/TracerService';
+import { InventoryVariantStockGateway } from '@src/app/modules/inventory/application/ports/InventoryRepositories';
+import { InMemoryInventoryVariantStockGateway } from '@src/app/modules/inventory/infrastructure/repositories/in-memory/InMemoryInventoryVariantStockGateway';
+import {
+  ReportingInventoryReader,
+  ReportingSalesReader,
+} from '@src/app/modules/reporting/application/ports/ReportingRepositories';
+import { ReportingAuthorizationPolicy } from '@src/app/modules/reporting/application/ports/ReportingServices';
+import { GetBestSellersReportHandler } from '@src/app/modules/reporting/application/queries/GetBestSellersReportHandler';
+import { GetDailySalesReportHandler } from '@src/app/modules/reporting/application/queries/GetDailySalesReportHandler';
+import { GetLowStockReportHandler } from '@src/app/modules/reporting/application/queries/GetLowStockReportHandler';
+import { RoleBasedReportingAuthorizationPolicy } from '@src/app/modules/reporting/application/ReportingAuthorizationPolicy';
+import types from '@src/app/modules/reporting/config/types';
+import { InventoryReportingReader } from '@src/app/modules/reporting/infrastructure/services/InventoryReportingReader';
+import { SalesReportingReader } from '@src/app/modules/reporting/infrastructure/services/SalesReportingReader';
+import { InMemorySaleRepository } from '@src/app/modules/sales/infrastructure/repositories/in-memory/InMemorySaleRepository';
+
+const container = new Container();
+container.bind<ILogger>(types.Logger).to(PowertoolsLoggerAdapter).inSingletonScope();
+container.bind<MetricsService>(types.MetricsService).to(MetricsService).inSingletonScope();
+container.bind<TracerService>(types.TracerService).to(TracerService).inSingletonScope();
+container
+  .bind<ReportingAuthorizationPolicy>(types.ReportingAuthorizationPolicy)
+  .to(RoleBasedReportingAuthorizationPolicy)
+  .inSingletonScope();
+container
+  .bind<ReportingSalesReader>(types.ReportingSalesReader)
+  .toDynamicValue(() => new SalesReportingReader(new InMemorySaleRepository()))
+  .inSingletonScope();
+container
+  .bind<ReportingInventoryReader>(types.ReportingInventoryReader)
+  .toDynamicValue(() => {
+    const variants: ProductVariantRepository = new InMemoryProductVariantRepository(sharedInMemoryCatalogStore);
+    const inventory: InventoryVariantStockGateway = new InMemoryInventoryVariantStockGateway(variants);
+    return new InventoryReportingReader(inventory);
+  })
+  .inSingletonScope();
+container
+  .bind<GetDailySalesReportHandler>(types.GetDailySalesReportHandler)
+  .toDynamicValue(
+    (context) =>
+      new GetDailySalesReportHandler(
+        context.get<ReportingSalesReader>(types.ReportingSalesReader),
+        context.get<ReportingAuthorizationPolicy>(types.ReportingAuthorizationPolicy)
+      )
+  );
+container
+  .bind<GetBestSellersReportHandler>(types.GetBestSellersReportHandler)
+  .toDynamicValue(
+    (context) =>
+      new GetBestSellersReportHandler(
+        context.get<ReportingSalesReader>(types.ReportingSalesReader),
+        context.get<ReportingAuthorizationPolicy>(types.ReportingAuthorizationPolicy)
+      )
+  );
+container
+  .bind<GetLowStockReportHandler>(types.GetLowStockReportHandler)
+  .toDynamicValue(
+    (context) =>
+      new GetLowStockReportHandler(
+        context.get<ReportingInventoryReader>(types.ReportingInventoryReader),
+        context.get<ReportingAuthorizationPolicy>(types.ReportingAuthorizationPolicy)
+      )
+  );
+
+export default container;

@@ -1,26 +1,17 @@
-export type Role = 'ADMIN' | 'MANAGER' | 'CASHIER';
+import { CognitoJwtVerifier } from '@src/app/modules/auth/infrastructure/CognitoJwtVerifier';
+import { AuthenticatedPrincipal } from '@src/shared/application/auth/AuthenticatedPrincipal';
 
+type Headers = Record<string, string | undefined>;
+
+const verifier = CognitoJwtVerifier.fromEnvironment();
+
+/**
+ * Temporary compatibility adapter for the inherited Lambda entrypoints.
+ * Authentication remains asynchronous because Cognito signing keys are remote.
+ */
 export default class Authorization {
-  private readonly _subjectId: string;
-  private readonly _storeId: string;
-  private readonly _roles: readonly Role[];
-
-  constructor(jwt: string) {
-    const decodedJWT = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64').toString());
-    this._subjectId = decodedJWT['sub'] || '';
-    this._storeId = decodedJWT['store_id'] || '';
-    this._roles = (decodedJWT['roles'] || '').split(',') as Role[];
-  }
-
-  get subjectId(): string {
-    return this._subjectId;
-  }
-
-  get storeId(): string {
-    return this._storeId;
-  }
-
-  get roles(): readonly Role[] {
-    return this._roles;
+  static authenticate(headers: Headers): Promise<AuthenticatedPrincipal> {
+    const authorization = Object.entries(headers).find(([name]) => name.toLowerCase() === 'authorization')?.[1];
+    return verifier.verifyBearerToken(authorization);
   }
 }

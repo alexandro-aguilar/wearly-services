@@ -32,7 +32,7 @@ const logger: ILogger = container.get(types.Logger);
 export const handler = middy(
   async (event: APIGatewayProxyEventV2, context: Context): Promise<APIGatewayProxyResultV2<unknown>> => {
     logger.addContext({ requestId: context.awsRequestId });
-    const authenticatedPrincipal = new Authorization(event.headers['Authorization'] || '');
+    const authenticatedPrincipal = await Authorization.authenticate(event.headers);
 
     if (event.queryStringParameters?.lowStock) {
       const listLowStockVariantsHandler = container.get<ListLowStockVariantsHandler>(types.ListLowStockVariantsHandler);

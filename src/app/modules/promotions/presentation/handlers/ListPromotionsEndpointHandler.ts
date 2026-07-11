@@ -30,7 +30,7 @@ export const handler = middy(
     context: Context
   ): Promise<APIGatewayProxyResultV2<{ promotions: PromotionSnapshot[] }>> => {
     logger.addContext({ requestId: context.awsRequestId });
-    const principal = new Authorization(event.headers['Authorization'] || '');
+    const principal = await Authorization.authenticate(event.headers);
     const activeOnly = event.queryStringParameters?.active === 'true';
     const promotions = activeOnly
       ? await container.get<ListActivePromotionsHandler>(types.ListActivePromotionsHandler).execute(principal)

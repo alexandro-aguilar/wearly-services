@@ -5,7 +5,10 @@ import TracerService from '@src/app/core/utils/TracerService';
 import { CryptoIdGenerator } from '@src/app/core/utils/CryptoIdGenerator';
 import ILogger from '@src/app/core/utils/ILogger';
 import { SystemClock } from '@src/shared/application/Clock';
-import { InMemoryCatalogStore } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryCatalogStore';
+import {
+  InMemoryCatalogStore,
+  sharedInMemoryCatalogStore,
+} from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryCatalogStore';
 import { InMemoryProductVariantRepository } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryProductVariantRepository';
 import { ProductVariantRepository } from '@src/app/modules/catalog/application/ports/CatalogRepositories';
 import { RoleBasedInventoryAuthorizationPolicy } from '@src/app/modules/inventory/application/InventoryAuthorizationPolicy';
@@ -37,7 +40,7 @@ container
   .inSingletonScope();
 container.bind<InventoryClock>(types.InventoryClock).to(SystemClock).inSingletonScope();
 container.bind<InventoryIdGenerator>(types.InventoryIdGenerator).to(CryptoIdGenerator).inSingletonScope();
-container.bind<InMemoryCatalogStore>(types.InventoryCatalogStore).to(InMemoryCatalogStore).inSingletonScope();
+container.bind<InMemoryCatalogStore>(types.InventoryCatalogStore).toConstantValue(sharedInMemoryCatalogStore);
 container
   .bind<ProductVariantRepository>(types.InventoryProductVariantRepository)
   .toDynamicValue(

@@ -43,7 +43,7 @@ export const handler = middy(
   ): Promise<APIGatewayProxyResultV2<{ id: string; status: 'COMPLETED' }>> => {
     logger.addContext({ requestId: context.awsRequestId });
     const command = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
-    const principal = new Authorization(event.headers['Authorization'] || '');
+    const principal = await Authorization.authenticate(event.headers);
     return container.get<CompleteSaleHandler>(types.CompleteSaleHandler).execute(principal, command);
   }
 )
