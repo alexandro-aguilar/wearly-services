@@ -13,6 +13,7 @@ const types = {
   SalesCatalogGateway: Symbol.for('SalesCatalogGateway'),
   SalesInventoryGateway: Symbol.for('SalesInventoryGateway'),
   SalesPromotionGateway: Symbol.for('SalesPromotionGateway'),
+  SalesCustomerGateway: Symbol.for('SalesCustomerGateway'),
   SaleRepository: Symbol.for('SaleRepository'),
   CheckoutTransactionManager: Symbol.for('CheckoutTransactionManager'),
   CompleteSaleHandler: Symbol.for('CompleteSaleHandler'),

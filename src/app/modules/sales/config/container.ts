@@ -22,6 +22,7 @@ import {
   CheckoutTransactionManager,
   SaleRepository,
   SalesCatalogGateway,
+  SalesCustomerGateway,
   SalesInventoryGateway,
   SalesPromotionGateway,
 } from '@src/app/modules/sales/application/ports/SalesRepositories';
@@ -42,6 +43,8 @@ import { SystemClock } from '@src/shared/application/Clock';
 import { EvaluatePromotionsHandler } from '@src/app/modules/promotions/application/queries/EvaluatePromotionsHandler';
 import { InMemoryPromotionRepository } from '@src/app/modules/promotions/infrastructure/repositories/in-memory/InMemoryPromotionRepository';
 import { PromotionCheckoutAdapter } from '@src/app/modules/promotions/infrastructure/services/PromotionCheckoutAdapter';
+import { InMemoryCustomerRepository } from '@src/app/modules/customers/infrastructure/repositories/in-memory/InMemoryCustomerRepository';
+import { CustomerCheckoutAdapter } from '@src/app/modules/customers/infrastructure/services/CustomerCheckoutAdapter';
 
 const container = new Container();
 
@@ -92,6 +95,10 @@ container
   .toDynamicValue(() => new PromotionCheckoutAdapter(new EvaluatePromotionsHandler(new InMemoryPromotionRepository())))
   .inSingletonScope();
 container
+  .bind<SalesCustomerGateway>(types.SalesCustomerGateway)
+  .toDynamicValue(() => new CustomerCheckoutAdapter(new InMemoryCustomerRepository()))
+  .inSingletonScope();
+container
   .bind<SalesInventoryGateway>(types.SalesInventoryGateway)
   .toDynamicValue(
     (context) =>
@@ -126,7 +133,8 @@ container
         context.get<SalesAuthorizationPolicy>(types.SalesAuthorizationPolicy),
         context.get<SalesClock>(types.SalesClock),
         context.get<SalesIdGenerator>(types.SalesIdGenerator),
-        context.get<SalesPromotionGateway>(types.SalesPromotionGateway)
+        context.get<SalesPromotionGateway>(types.SalesPromotionGateway),
+        context.get<SalesCustomerGateway>(types.SalesCustomerGateway)
       )
   )
   .inSingletonScope();

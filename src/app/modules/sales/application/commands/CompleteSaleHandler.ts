@@ -2,6 +2,7 @@ import {
   CheckoutTransactionManager,
   SaleRepository,
   SalesCatalogGateway,
+  SalesCustomerGateway,
   SalesInventoryGateway,
   SalesPromotionGateway,
 } from '@src/app/modules/sales/application/ports/SalesRepositories';
@@ -40,6 +41,10 @@ const noPromotions: SalesPromotionGateway = {
     items.map((item) => ({ productVariantId: item.productVariantId, discount: 0 })),
 };
 
+const noCustomerValidation: SalesCustomerGateway = {
+  isActiveCustomer: async () => true,
+};
+
 export class CompleteSaleHandler {
   constructor(
     private readonly catalog: SalesCatalogGateway,
@@ -49,7 +54,8 @@ export class CompleteSaleHandler {
     private readonly authorization: SalesAuthorizationPolicy,
     private readonly clock: SalesClock,
     private readonly ids: SalesIdGenerator,
-    private readonly promotions: SalesPromotionGateway = noPromotions
+    private readonly promotions: SalesPromotionGateway = noPromotions,
+    private readonly customers: SalesCustomerGateway = noCustomerValidation
   ) {}
 
   async execute(principal: AuthenticatedPrincipal, command: CompleteSaleCommand): Promise<CompleteSaleResult> {
@@ -57,6 +63,9 @@ export class CompleteSaleHandler {
     const requestedItems = aggregateItems(command.items);
 
     return this.transaction.execute(async () => {
+      if (command.customerId && !(await this.customers.isActiveCustomer(principal.storeId, command.customerId))) {
+        throw new NotFoundError('Customer was not found.');
+      }
       const pricedItems = await Promise.all(
         requestedItems.map(async (item) => {
           const variant = await this.catalog.findActiveVariant(principal.storeId, item.productVariantId);

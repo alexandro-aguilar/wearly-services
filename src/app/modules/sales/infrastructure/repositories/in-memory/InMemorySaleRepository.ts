@@ -1,8 +1,10 @@
 import { SaleRepository } from '@src/app/modules/sales/application/ports/SalesRepositories';
 import { cloneSale, SaleSnapshot } from '@src/app/modules/sales/domain/Sale';
 
+export const sharedInMemorySalesStore = new Map<string, SaleSnapshot>();
+
 export class InMemorySaleRepository implements SaleRepository {
-  private readonly sales = new Map<string, SaleSnapshot>();
+  constructor(private readonly sales: Map<string, SaleSnapshot> = sharedInMemorySalesStore) {}
 
   async save(sale: SaleSnapshot): Promise<void> {
     this.sales.set(key(sale.storeId, sale.id), cloneSale(sale));

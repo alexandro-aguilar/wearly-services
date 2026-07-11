@@ -34,3 +34,7 @@ export interface SalesPromotionGateway {
     items: readonly (SalesCatalogVariant & { readonly quantity: number })[]
   ): Promise<readonly { productVariantId: string; discount: number }[]>;
 }
+
+export interface SalesCustomerGateway {
+  isActiveCustomer(storeId: string, customerId: string): Promise<boolean>;
+}

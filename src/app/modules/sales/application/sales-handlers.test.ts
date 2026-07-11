@@ -5,6 +5,7 @@ import {
   CheckoutTransactionManager,
   SaleRepository,
   SalesCatalogGateway,
+  SalesCustomerGateway,
   SalesInventoryGateway,
   SalesPromotionGateway,
 } from '@src/app/modules/sales/application/ports/SalesRepositories';
@@ -93,6 +94,33 @@ describe('sales checkout handlers', () => {
       total: 200,
       items: [expect.objectContaining({ discount: 50, total: 200 })],
     });
+  });
+
+  it('associates only an active customer from the authenticated store', async () => {
+    const customerGateway: SalesCustomerGateway = {
+      isActiveCustomer: async (storeId, customerId) => storeId === 'store-a' && customerId === 'customer-1',
+    };
+    const sales = buildSalesHarness(
+      [variant({ id: 'variant-1', storeId: 'store-a', price: 100, stock: 2 })],
+      undefined,
+      customerGateway
+    );
+
+    await sales.complete.execute(cashier('store-a'), {
+      customerId: 'customer-1',
+      items: [{ productVariantId: 'variant-1', quantity: 1 }],
+      paymentMethod: 'CASH',
+    });
+    await expect(sales.getById.execute(cashier('store-a'), 'sale-1')).resolves.toMatchObject({
+      customerId: 'customer-1',
+    });
+    await expect(
+      sales.complete.execute(cashier('store-a'), {
+        customerId: 'missing',
+        items: [{ productVariantId: 'variant-1', quantity: 1 }],
+        paymentMethod: 'CASH',
+      })
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it('rejects insufficient stock without persisting partial checkout changes', async () => {
@@ -300,7 +328,11 @@ class SequentialSalesIdGenerator implements SalesIdGenerator {
   }
 }
 
-function buildSalesHarness(variants: VariantRecord[], promotions?: SalesPromotionGateway) {
+function buildSalesHarness(
+  variants: VariantRecord[],
+  promotions?: SalesPromotionGateway,
+  customers?: SalesCustomerGateway
+) {
   const catalog = new FakeCatalogGateway(variants);
   const inventory = new FakeInventoryGateway(variants);
   const repository = new FakeSaleRepository();
@@ -318,7 +350,8 @@ function buildSalesHarness(variants: VariantRecord[], promotions?: SalesPromotio
       authorization,
       clock,
       ids,
-      promotions
+      promotions,
+      customers
     ),
     getById: new GetSaleByIdHandler(repository, authorization),
     list: new ListSalesHandler(repository, authorization),
