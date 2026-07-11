@@ -32,8 +32,8 @@ Cross-cutting implementation rules belong in [Platform Rules](./platform.md). Do
 
 ## Implementation Defaults
 
-- New Wearly features should use the target stack: Node.js 24, TypeScript, Fastify, PostgreSQL, Prisma, Vitest, and AWS CDK.
+- New Wearly features should use the target stack: Node.js 24, TypeScript, PostgreSQL, Prisma, Vitest, and AWS CDK.
 - Current inherited Lambda, Middy, Drizzle, and Terraform code may remain during migration, but new business logic should use Wearly bounded contexts instead of legacy project naming.
-- Domain code must remain independent of Fastify, Prisma, Drizzle, AWS, HTTP, environment variables, and framework decorators.
+- Domain code must remain independent of Prisma, Drizzle, AWS, HTTP, environment variables, and framework decorators.
 - All tenant-scoped behavior must validate or carry `storeId`.
 - Business rules should be specified and tested before implementation when feasible.

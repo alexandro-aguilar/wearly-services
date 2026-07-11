@@ -5,18 +5,24 @@ import {
 } from '@src/app/modules/catalog/application/ports/CatalogRepositories';
 import { ProductSnapshot } from '@src/app/modules/catalog/domain/Product';
 import { ProductVariantSnapshot } from '@src/app/modules/catalog/domain/ProductVariant';
-import { AuthenticatedPrincipal, AuthorizationPolicy } from '@src/shared/application/auth/AuthenticatedPrincipal';
-import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '@src/shared/domain/errors/PlatformError';
+import { CatalogAuthorizationPolicy } from '@src/app/modules/catalog/application/ports/CatalogServices';
+import { AuthenticatedPrincipal } from '@src/shared/application/auth/AuthenticatedPrincipal';
+import {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from '@src/shared/domain/exceptions/PlatformError';
 
 export function authorizeCatalogRead(
-  authorizationPolicy: AuthorizationPolicy,
+  authorizationPolicy: CatalogAuthorizationPolicy,
   principal: AuthenticatedPrincipal
 ): void {
   authorize(authorizationPolicy, principal, catalogPermissions.read);
 }
 
 export function authorizeCatalogManage(
-  authorizationPolicy: AuthorizationPolicy,
+  authorizationPolicy: CatalogAuthorizationPolicy,
   principal: AuthenticatedPrincipal
 ): void {
   authorize(authorizationPolicy, principal, catalogPermissions.manage);
@@ -83,7 +89,7 @@ export async function assertBarcodeAvailable(
 }
 
 function authorize(
-  authorizationPolicy: AuthorizationPolicy,
+  authorizationPolicy: CatalogAuthorizationPolicy,
   principal: AuthenticatedPrincipal,
   permission: string
 ): void {

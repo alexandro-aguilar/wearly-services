@@ -1,14 +1,14 @@
 import { ProductVariantRepository } from '@src/app/modules/catalog/application/ports/CatalogRepositories';
+import { CatalogAuthorizationPolicy, CatalogClock } from '@src/app/modules/catalog/application/ports/CatalogServices';
 import { authorizeCatalogManage, findVariantOrThrow } from '@src/app/modules/catalog/application/shared/CatalogGuards';
 import { ProductVariant } from '@src/app/modules/catalog/domain/ProductVariant';
-import { Clock } from '@src/shared/application/Clock';
-import { AuthenticatedPrincipal, AuthorizationPolicy } from '@src/shared/application/auth/AuthenticatedPrincipal';
+import { AuthenticatedPrincipal } from '@src/shared/application/auth/AuthenticatedPrincipal';
 
 export class DeactivateProductVariantHandler {
   constructor(
     private readonly variants: ProductVariantRepository,
-    private readonly authorizationPolicy: AuthorizationPolicy,
-    private readonly clock: Clock
+    private readonly authorizationPolicy: CatalogAuthorizationPolicy,
+    private readonly clock: CatalogClock
   ) {}
 
   async execute(principal: AuthenticatedPrincipal, id: string): Promise<{ id: string; active: false }> {

@@ -4,7 +4,7 @@ import { Money } from '@src/app/modules/catalog/domain/Money';
 import { Product } from '@src/app/modules/catalog/domain/Product';
 import { Quantity } from '@src/app/modules/catalog/domain/Quantity';
 import { Sku } from '@src/app/modules/catalog/domain/Sku';
-import { ValidationError } from '@src/shared/domain/errors/PlatformError';
+import { ValidationError } from '@src/shared/domain/exceptions/PlatformError';
 
 export interface ProductVariantSnapshot {
   readonly id: string;

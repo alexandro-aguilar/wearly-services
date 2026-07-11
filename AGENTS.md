@@ -25,7 +25,6 @@ Target stack from the handoff:
 
 - Node.js 24
 - TypeScript
-- Fastify
 - PostgreSQL
 - Prisma
 - Vitest
@@ -51,7 +50,16 @@ presentation -> application -> domain
 infrastructure -> application/domain contracts
 ```
 
-Domain code must not depend on Fastify, Prisma, Drizzle, AWS, HTTP, environment variables, or framework decorators. Application code orchestrates use cases and depends on domain interfaces. Infrastructure implements ports such as repositories, transaction managers, password hashers, token services, payment adapters, and database clients. Presentation adapts HTTP requests and responses to application commands and queries.
+Domain code must not depend on Prisma, Drizzle, AWS, HTTP, environment variables, or framework decorators. Application code orchestrates use cases and depends on domain interfaces. Infrastructure implements ports such as repositories, transaction managers, password hashers, token services, payment adapters, and database clients. Presentation adapts HTTP requests and responses to application commands and queries.
+
+Infrastructure layer organization:
+
+- Keep concrete implementations under each bounded context's `infrastructure/` folder, grouped by responsibility.
+- Put repository implementations in `infrastructure/repositories/<technology-or-storage>/`, for example `repositories/in-memory` or future `repositories/prisma`.
+- Put feature-owned application service implementations and adapters in `infrastructure/services/`, such as a catalog image adapter or a sales payment adapter. Cross-cutting tools and generic implementations, such as `CryptoIdGenerator`, shared clocks, loggers, metrics, tracers, token helpers, and other reusable utilities belong under `src/app/core/utils`.
+- Put database clients, ORM schema, migrations, and seeders in `infrastructure/database/` when they are owned by that context. Shared legacy database scaffolding may remain under `src/app/core/infrastructure/database` during migration.
+- Put module wiring in the bounded context's dependency injection container, such as `src/app/modules/catalog/config/container.ts`. Do not add separate module factory files; the container should bind concrete infrastructure and construct application handlers.
+- Do not place port interfaces in infrastructure. Keep repository, service, and transaction contracts in `application/ports` or `domain` and make command/query handlers and infrastructure depend inward on those contracts.
 
 Target bounded contexts:
 

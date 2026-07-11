@@ -38,9 +38,9 @@ Each feature directory should own its `domain`, `application`, `infrastructure`,
 
 ## Layer Rules
 
-Domain code contains business behavior and invariants. It must not depend on Fastify, Prisma, Drizzle, AWS, HTTP objects, environment variables, or decorators.
+Domain code contains business behavior and invariants. It must not depend on Prisma, Drizzle, AWS, HTTP objects, environment variables, or decorators.
 
-Application code coordinates use cases with CQRS. Command and query handlers should depend on ports for repositories, authorization, clocks, transactions, tokens, hashing, and external integrations.
+Application code coordinates use cases with CQRS. Command and query handlers should depend on interfaces in `application/ports` for repositories, authorization, clocks, transactions, tokens, hashing, and external integrations.
 
 Infrastructure implements application and domain contracts. It may contain Prisma clients, repositories, transaction managers, password hashers, token services, payment adapters, AWS clients, migrations, and seeders.
 
@@ -140,8 +140,6 @@ Target runtime:
 
 - Node.js 24.
 - TypeScript.
-- Fastify.
-- Fastify Lambda adapter.
 
 Target AWS services:
 

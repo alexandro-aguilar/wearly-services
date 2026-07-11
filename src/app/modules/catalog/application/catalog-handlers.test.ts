@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RoleBasedCatalogAuthorizationPolicy } from '@src/app/modules/catalog/application/CatalogAuthorizationPolicy';
-import { IdGenerator } from '@src/app/modules/catalog/application/IdGenerator';
+import { CatalogClock, IdGenerator } from '@src/app/modules/catalog/application/ports/CatalogServices';
 import { CreateProductHandler } from '@src/app/modules/catalog/application/commands/CreateProductHandler';
 import { CreateProductVariantHandler } from '@src/app/modules/catalog/application/commands/CreateProductVariantHandler';
 import { DeactivateProductHandler } from '@src/app/modules/catalog/application/commands/DeactivateProductHandler';
@@ -9,14 +9,16 @@ import { GetProductVariantByIdHandler } from '@src/app/modules/catalog/applicati
 import { ListProductsHandler } from '@src/app/modules/catalog/application/queries/ListProductsHandler';
 import { ListProductVariantsHandler } from '@src/app/modules/catalog/application/queries/ListProductVariantsHandler';
 import { UpdateProductVariantHandler } from '@src/app/modules/catalog/application/commands/UpdateProductVariantHandler';
-import {
-  InMemoryCatalogStore,
-  InMemoryProductRepository,
-  InMemoryProductVariantRepository,
-} from '@src/app/modules/catalog/infrastructure/InMemoryCatalogStore';
-import { Clock } from '@src/shared/application/Clock';
+import { InMemoryCatalogStore } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryCatalogStore';
+import { InMemoryProductRepository } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryProductRepository';
+import { InMemoryProductVariantRepository } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryProductVariantRepository';
 import { AuthenticatedPrincipal } from '@src/shared/application/auth/AuthenticatedPrincipal';
-import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '@src/shared/domain/errors/PlatformError';
+import {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from '@src/shared/domain/exceptions/PlatformError';
 
 describe('catalog command and query handlers', () => {
   it('creates products and variants scoped to the principal store', async () => {
@@ -157,7 +159,7 @@ function buildCatalogHarness() {
   const products = new InMemoryProductRepository(store);
   const variants = new InMemoryProductVariantRepository(store);
   const authorizationPolicy = new RoleBasedCatalogAuthorizationPolicy();
-  const clock: Clock = {
+  const clock: CatalogClock = {
     now: () => new Date('2026-01-01T00:00:00.000Z'),
   };
   const idGenerator: IdGenerator = new SequentialIdGenerator();

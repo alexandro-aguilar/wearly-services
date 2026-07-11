@@ -1,4 +1,4 @@
-import { ValidationError } from '@src/shared/domain/errors/PlatformError';
+import { ValidationError } from '@src/shared/domain/exceptions/PlatformError';
 
 export class Sku {
   private constructor(readonly value: string) {}

@@ -1,5 +1,5 @@
 import { ProductId, StoreId } from '@src/app/modules/catalog/domain/Identifiers';
-import { ValidationError } from '@src/shared/domain/errors/PlatformError';
+import { ValidationError } from '@src/shared/domain/exceptions/PlatformError';
 
 export interface ProductSnapshot {
   readonly id: string;

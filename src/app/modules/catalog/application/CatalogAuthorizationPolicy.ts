@@ -1,11 +1,12 @@
-import { AuthenticatedPrincipal, AuthorizationPolicy } from '@src/shared/application/auth/AuthenticatedPrincipal';
+import { CatalogAuthorizationPolicy } from '@src/app/modules/catalog/application/ports/CatalogServices';
+import { AuthenticatedPrincipal } from '@src/shared/application/auth/AuthenticatedPrincipal';
 
 export const catalogPermissions = {
   read: 'catalog:read',
   manage: 'catalog:manage',
 } as const;
 
-export class RoleBasedCatalogAuthorizationPolicy implements AuthorizationPolicy {
+export class RoleBasedCatalogAuthorizationPolicy implements CatalogAuthorizationPolicy {
   can(principal: AuthenticatedPrincipal, permission: string): boolean {
     if (permission === catalogPermissions.read) {
       return principal.roles.some((role) => role === 'ADMIN' || role === 'MANAGER' || role === 'CASHIER');

@@ -2,8 +2,9 @@ import { Container } from 'inversify';
 import MetricsService from '@src/app/core/utils/MetricsService';
 import PowertoolsLoggerAdapter from '@src/app/core/utils/Logger';
 import TracerService from '@src/app/core/utils/TracerService';
-import { buildCatalogModule } from '@src/app/modules/catalog/infrastructure/buildCatalogModule';
+import { CryptoIdGenerator } from '@src/app/core/utils/CryptoIdGenerator';
 import types from '@src/app/modules/catalog/config/types';
+import { RoleBasedCatalogAuthorizationPolicy } from '@src/app/modules/catalog/application/CatalogAuthorizationPolicy';
 import { CreateProductHandler } from '@src/app/modules/catalog/application/commands/CreateProductHandler';
 import { UpdateProductHandler } from '@src/app/modules/catalog/application/commands/UpdateProductHandler';
 import { DeactivateProductHandler } from '@src/app/modules/catalog/application/commands/DeactivateProductHandler';
@@ -14,33 +15,152 @@ import { ListProductsHandler } from '@src/app/modules/catalog/application/querie
 import { GetProductByIdHandler } from '@src/app/modules/catalog/application/queries/GetProductByIdHandler';
 import { ListProductVariantsHandler } from '@src/app/modules/catalog/application/queries/ListProductVariantsHandler';
 import { GetProductVariantByIdHandler } from '@src/app/modules/catalog/application/queries/GetProductVariantByIdHandler';
+import {
+  CatalogAuthorizationPolicy,
+  CatalogClock,
+  IdGenerator,
+} from '@src/app/modules/catalog/application/ports/CatalogServices';
+import {
+  ProductRepository,
+  ProductVariantRepository,
+} from '@src/app/modules/catalog/application/ports/CatalogRepositories';
+import { InMemoryCatalogStore } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryCatalogStore';
+import { InMemoryProductRepository } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryProductRepository';
+import { InMemoryProductVariantRepository } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryProductVariantRepository';
 import ILogger from '@src/app/core/utils/ILogger';
+import { SystemClock } from '@src/shared/application/Clock';
 
 const container = new Container();
-const handlers = buildCatalogModule();
 
 container.bind<ILogger>(types.Logger).to(PowertoolsLoggerAdapter).inSingletonScope();
 container.bind<MetricsService>(types.MetricsService).to(MetricsService).inSingletonScope();
 container.bind<TracerService>(types.TracerService).to(TracerService).inSingletonScope();
-container.bind<CreateProductHandler>(types.CreateProductHandler).toConstantValue(handlers.createProduct);
-container.bind<UpdateProductHandler>(types.UpdateProductHandler).toConstantValue(handlers.updateProduct);
-container.bind<DeactivateProductHandler>(types.DeactivateProductHandler).toConstantValue(handlers.deactivateProduct);
-container.bind<ListProductsHandler>(types.ListProductsHandler).toConstantValue(handlers.listProducts);
-container.bind<GetProductByIdHandler>(types.GetProductByIdHandler).toConstantValue(handlers.getProductById);
+container
+  .bind<CatalogAuthorizationPolicy>(types.CatalogAuthorizationPolicy)
+  .to(RoleBasedCatalogAuthorizationPolicy)
+  .inSingletonScope();
+container.bind<CatalogClock>(types.CatalogClock).to(SystemClock).inSingletonScope();
+container.bind<IdGenerator>(types.CatalogIdGenerator).to(CryptoIdGenerator).inSingletonScope();
+container.bind<InMemoryCatalogStore>(types.CatalogStore).to(InMemoryCatalogStore).inSingletonScope();
+container
+  .bind<ProductRepository>(types.ProductRepository)
+  .toDynamicValue((context) => new InMemoryProductRepository(context.get<InMemoryCatalogStore>(types.CatalogStore)))
+  .inSingletonScope();
+container
+  .bind<ProductVariantRepository>(types.ProductVariantRepository)
+  .toDynamicValue(
+    (context) => new InMemoryProductVariantRepository(context.get<InMemoryCatalogStore>(types.CatalogStore))
+  )
+  .inSingletonScope();
+
+container
+  .bind<CreateProductHandler>(types.CreateProductHandler)
+  .toDynamicValue(
+    (context) =>
+      new CreateProductHandler(
+        context.get<ProductRepository>(types.ProductRepository),
+        context.get<CatalogAuthorizationPolicy>(types.CatalogAuthorizationPolicy),
+        context.get<CatalogClock>(types.CatalogClock),
+        context.get<IdGenerator>(types.CatalogIdGenerator)
+      )
+  )
+  .inSingletonScope();
+container
+  .bind<UpdateProductHandler>(types.UpdateProductHandler)
+  .toDynamicValue(
+    (context) =>
+      new UpdateProductHandler(
+        context.get<ProductRepository>(types.ProductRepository),
+        context.get<CatalogAuthorizationPolicy>(types.CatalogAuthorizationPolicy),
+        context.get<CatalogClock>(types.CatalogClock)
+      )
+  )
+  .inSingletonScope();
+container
+  .bind<DeactivateProductHandler>(types.DeactivateProductHandler)
+  .toDynamicValue(
+    (context) =>
+      new DeactivateProductHandler(
+        context.get<ProductRepository>(types.ProductRepository),
+        context.get<CatalogAuthorizationPolicy>(types.CatalogAuthorizationPolicy),
+        context.get<CatalogClock>(types.CatalogClock)
+      )
+  )
+  .inSingletonScope();
+container
+  .bind<ListProductsHandler>(types.ListProductsHandler)
+  .toDynamicValue(
+    (context) =>
+      new ListProductsHandler(
+        context.get<ProductRepository>(types.ProductRepository),
+        context.get<CatalogAuthorizationPolicy>(types.CatalogAuthorizationPolicy)
+      )
+  )
+  .inSingletonScope();
+container
+  .bind<GetProductByIdHandler>(types.GetProductByIdHandler)
+  .toDynamicValue(
+    (context) =>
+      new GetProductByIdHandler(
+        context.get<ProductRepository>(types.ProductRepository),
+        context.get<CatalogAuthorizationPolicy>(types.CatalogAuthorizationPolicy)
+      )
+  )
+  .inSingletonScope();
 container
   .bind<CreateProductVariantHandler>(types.CreateProductVariantHandler)
-  .toConstantValue(handlers.createProductVariant);
+  .toDynamicValue(
+    (context) =>
+      new CreateProductVariantHandler(
+        context.get<ProductRepository>(types.ProductRepository),
+        context.get<ProductVariantRepository>(types.ProductVariantRepository),
+        context.get<CatalogAuthorizationPolicy>(types.CatalogAuthorizationPolicy),
+        context.get<CatalogClock>(types.CatalogClock),
+        context.get<IdGenerator>(types.CatalogIdGenerator)
+      )
+  )
+  .inSingletonScope();
 container
   .bind<UpdateProductVariantHandler>(types.UpdateProductVariantHandler)
-  .toConstantValue(handlers.updateProductVariant);
+  .toDynamicValue(
+    (context) =>
+      new UpdateProductVariantHandler(
+        context.get<ProductVariantRepository>(types.ProductVariantRepository),
+        context.get<CatalogAuthorizationPolicy>(types.CatalogAuthorizationPolicy),
+        context.get<CatalogClock>(types.CatalogClock)
+      )
+  )
+  .inSingletonScope();
 container
   .bind<DeactivateProductVariantHandler>(types.DeactivateProductVariantHandler)
-  .toConstantValue(handlers.deactivateProductVariant);
+  .toDynamicValue(
+    (context) =>
+      new DeactivateProductVariantHandler(
+        context.get<ProductVariantRepository>(types.ProductVariantRepository),
+        context.get<CatalogAuthorizationPolicy>(types.CatalogAuthorizationPolicy),
+        context.get<CatalogClock>(types.CatalogClock)
+      )
+  )
+  .inSingletonScope();
 container
   .bind<ListProductVariantsHandler>(types.ListProductVariantsHandler)
-  .toConstantValue(handlers.listProductVariants);
+  .toDynamicValue(
+    (context) =>
+      new ListProductVariantsHandler(
+        context.get<ProductVariantRepository>(types.ProductVariantRepository),
+        context.get<CatalogAuthorizationPolicy>(types.CatalogAuthorizationPolicy)
+      )
+  )
+  .inSingletonScope();
 container
   .bind<GetProductVariantByIdHandler>(types.GetProductVariantByIdHandler)
-  .toConstantValue(handlers.getProductVariantById);
+  .toDynamicValue(
+    (context) =>
+      new GetProductVariantByIdHandler(
+        context.get<ProductVariantRepository>(types.ProductVariantRepository),
+        context.get<CatalogAuthorizationPolicy>(types.CatalogAuthorizationPolicy)
+      )
+  )
+  .inSingletonScope();
 
 export default container;
