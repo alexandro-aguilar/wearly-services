@@ -6,6 +6,7 @@ Backend services and infrastructure for the Wearly clothing retail POS. The curr
 
 - Node.js 20+ and Yarn 4 (`corepack enable && yarn set version 4.9.2`).
 - Docker + Docker Compose (required for the bundled LocalStack setup).
+- On macOS, [Colima](https://github.com/abiosoft/colima) can provide the Docker daemon: run `colima start` before using any LocalStack or Docker command, then confirm it with `docker ps`.
 - LocalStack CLI (or use the provided `docker-compose.yml`).
 - Terraform >= 1.5 (`brew install terraform`).
 - TFLint (optional but recommended for Terraform linting).
@@ -35,6 +36,7 @@ Backend services and infrastructure for the Wearly clothing retail POS. The curr
 3. Start LocalStack (Docker-based):
 
    ```bash
+   colima start # macOS/Colima only
    yarn localstack
    ```
 

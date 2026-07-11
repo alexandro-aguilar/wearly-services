@@ -51,15 +51,19 @@ cdk.out/
 volume/
 
 # Terraform artifacts
-.terraform/
-terraform/.terraform/
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.json
+crash.log
+crash.*.log
 terraform/.build/
+terraform/.terraform.lock.hcl
 terraform/terraform.tfvars
-terraform/*.tfstate
-terraform/*.tfstate.backup
-terraform/*.tfstate.*
-terraform/crash.log
-terraform/crash.*.log
+terraform/terraform.tfvars.json
+terraform/*.auto.tfvars
+terraform/*.auto.tfvars.json
 terraform/override.tf
 terraform/override.tf.json
 terraform/*_override.tf

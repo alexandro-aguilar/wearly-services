@@ -6,6 +6,7 @@
 
 ```bash
 # 1. Start LocalStack
+colima start # macOS/Colima only
 docker-compose up
 
 # 2. Build and deploy to local
@@ -99,7 +100,7 @@ yarn tf:refresh              # Refresh state
 ### Common Issues
 
 1. **Build fails**: Check TypeScript compilation errors
-2. **LocalStack not responding**: Restart Docker Compose
+2. **LocalStack not responding**: Ensure the Docker daemon is running. On macOS with Colima, run `colima start`, confirm with `docker ps`, then restart Docker Compose.
 3. **State locked**: Wait for concurrent operations to complete
 4. **Module not found**: Run `yarn tf:init` first
 

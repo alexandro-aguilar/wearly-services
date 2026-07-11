@@ -132,6 +132,7 @@ Testing priorities:
 - Domain tests for entities, value objects, policies, promotion calculations, checkout totals, inventory movement rules, money, and quantities.
 - Application tests for command/query handlers using fake repositories, deterministic clocks, fake authorization policies, and fake transaction managers.
 - Integration tests for persistence adapters, HTTP routes, authentication, authorization, and transactional checkout.
+- Infrastructure verification deploys the local Terraform environment to LocalStack and confirms a protected API route rejects an unauthenticated request with `401`.
 - Regression tests for every bug fix.
 
 ## Runtime And Observability
