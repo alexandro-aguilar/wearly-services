@@ -30,7 +30,7 @@ Organize new Wearly code by bounded context:
 - `auth`
 - `shared`
 
-Domain code must not depend on Prisma, Drizzle, AWS, HTTP, environment variables, or framework decorators.
+Domain code must not depend on Drizzle, AWS, HTTP, environment variables, or framework decorators.
 
 ## Consequences
 

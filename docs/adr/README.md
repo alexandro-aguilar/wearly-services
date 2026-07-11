@@ -15,7 +15,7 @@ This folder records architecture decisions for Wearly Services.
 
 - [0001 - Use Clean Architecture With Bounded Contexts](./0001-use-clean-architecture-with-bounded-contexts.md)
 - [0002 - Use CQRS At The Application Layer](./0002-use-cqrs-at-the-application-layer.md)
-- [0004 - Use PostgreSQL And Prisma For New Wearly Persistence](./0004-use-postgresql-and-prisma-for-new-wearly-persistence.md)
+- [0004 - Use PostgreSQL And Drizzle For Wearly Persistence](./0004-use-postgresql-and-drizzle-for-wearly-persistence.md)
 - [0005 - Keep Promotions As A First-Class Bounded Context](./0005-keep-promotions-as-a-first-class-bounded-context.md)
 - [0006 - Enforce Store Isolation With Store ID](./0006-enforce-store-isolation-with-store-id.md)
 - [0007 - Use AWS Cognito JWTs And Role-Based Authorization](./0007-use-aws-cognito-jwts-and-role-based-authorization.md)

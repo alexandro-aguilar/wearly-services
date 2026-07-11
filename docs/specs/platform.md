@@ -38,11 +38,11 @@ Each feature directory should own its `domain`, `application`, `infrastructure`,
 
 ## Layer Rules
 
-Domain code contains business behavior and invariants. It must not depend on Prisma, Drizzle, AWS, HTTP objects, environment variables, or decorators.
+Domain code contains business behavior and invariants. It must not depend on Drizzle, AWS, HTTP objects, environment variables, or decorators.
 
 Application code coordinates use cases with CQRS. Command and query handlers should depend on interfaces in `application/ports` for repositories, authorization, clocks, transactions, tokens, hashing, and external integrations.
 
-Infrastructure implements application and domain contracts. It may contain Prisma clients, repositories, transaction managers, password hashers, token services, payment adapters, AWS clients, migrations, and seeders.
+Infrastructure implements application and domain contracts. It may contain Drizzle clients and schemas, repositories, transaction managers, password hashers, token services, payment adapters, AWS clients, migrations, and seeders.
 
 Presentation adapts HTTP to application commands and queries. It validates input, maps authenticated user and `storeId` context, returns response DTOs, and converts domain/application errors into HTTP responses.
 
@@ -79,14 +79,14 @@ Common mappings:
 
 ## Persistence Rules
 
-Use PostgreSQL. The handoff target is Prisma, while the current repository contains inherited Drizzle scaffolding.
+Use PostgreSQL with Drizzle, as established by ADR 0004. Evolve the existing Drizzle scaffolding as bounded contexts move from in-memory adapters to PostgreSQL.
 
 Rules:
 
 - Keep schema and ORM code in infrastructure.
 - Repositories implement application or domain ports.
 - Persistence records are not domain entities.
-- Do not mix Prisma and Drizzle inside the same feature without an explicit migration decision.
+- Use Drizzle for new Wearly persistence adapters.
 - Always include `storeId` in tenant-scoped reads and writes.
 - Use database constraints for primary keys, foreign keys, required fields, uniqueness, and valid enum values.
 - Keep user-facing business explanations in domain/application errors.

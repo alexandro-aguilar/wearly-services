@@ -4,7 +4,15 @@ Guidance for AI coding agents working on Wearly Services.
 
 ## Project Identity
 
-Wearly Services is the backend for a modern clothing retail POS. The product scope comes from `Handoff.md`, which is the source of truth for business direction until a fuller product specification exists.
+Wearly Services is the backend for a modern clothing retail POS. Product behavior and scope come from the feature specifications under `docs/specs/`. Architecture and technology decisions come from the accepted records under `docs/adr/`.
+
+Source-of-truth rules:
+
+- Read `docs/specs/README.md` and the relevant feature specs before making product or domain decisions.
+- Read `docs/adr/README.md` and the relevant accepted ADRs before making architecture or technology decisions.
+- Accepted ADRs govern architecture and technology choices. Feature specs govern product behavior and acceptance criteria.
+- If a spec and an accepted ADR appear to conflict, stop and request clarification rather than inventing a resolution.
+- Current code is evidence of existing implementation patterns, not authority over the specs or accepted ADRs.
 
 The backend must support:
 
@@ -21,12 +29,12 @@ This repository currently contains inherited TypeScript serverless infrastructur
 
 ## Technology Direction
 
-Target stack from the handoff:
+Target stack defined by the platform spec and accepted ADRs:
 
 - Node.js 24
 - TypeScript
 - PostgreSQL
-- Prisma
+- Drizzle
 - Vitest
 - AWS CDK in TypeScript
 
@@ -39,7 +47,7 @@ Current repository stack to be aware of:
 - Terraform scripts in `package.json` and `terraform/`
 - Jest dependencies are present, but the desired test runner for new Wearly code is Vitest
 
-When implementing new features, follow the handoff direction unless the task is explicitly about maintaining the existing Lambda/Terraform/Drizzle code.
+When implementing new features, follow the relevant specs and accepted ADRs unless the task is explicitly about maintaining the existing Lambda/Terraform/Drizzle code.
 
 ## Architecture
 
@@ -50,12 +58,12 @@ presentation -> application -> domain
 infrastructure -> application/domain contracts
 ```
 
-Domain code must not depend on Prisma, Drizzle, AWS, HTTP, environment variables, or framework decorators. Application code orchestrates use cases and depends on domain interfaces. Infrastructure implements ports such as repositories, transaction managers, password hashers, token services, payment adapters, and database clients. Presentation adapts HTTP requests and responses to application commands and queries.
+Domain code must not depend on Drizzle, AWS, HTTP, environment variables, or framework decorators. Application code orchestrates use cases and depends on domain interfaces. Infrastructure implements ports such as repositories, transaction managers, password hashers, token services, payment adapters, and database clients. Presentation adapts HTTP requests and responses to application commands and queries.
 
 Infrastructure layer organization:
 
 - Keep concrete implementations under each bounded context's `infrastructure/` folder, grouped by responsibility.
-- Put repository implementations in `infrastructure/repositories/<technology-or-storage>/`, for example `repositories/in-memory` or future `repositories/prisma`.
+- Put repository implementations in `infrastructure/repositories/<technology-or-storage>/`, for example `repositories/in-memory` or `repositories/drizzle`.
 - Put feature-owned application service implementations and adapters in `infrastructure/services/`, such as a catalog image adapter or a sales payment adapter. Cross-cutting tools and generic implementations, such as `CryptoIdGenerator`, shared clocks, loggers, metrics, tracers, token helpers, and other reusable utilities belong under `src/app/core/utils`.
 - Put database clients, ORM schema, migrations, and seeders in `infrastructure/database/` when they are owned by that context. Shared legacy database scaffolding may remain under `src/app/core/infrastructure/database` during migration.
 - Put module wiring in the bounded context's dependency injection container, such as `src/app/modules/catalog/config/container.ts`. Do not add separate module factory files; the container should bind concrete infrastructure and construct application handlers.
@@ -134,7 +142,7 @@ Promotion engine guidance:
 
 - Treat promotions as a first-class bounded context.
 - Promotions must be configurable without code changes.
-- Supported types from the handoff are `FIXED_COMBO`, `MIXED_COMBO`, `PERCENTAGE_DISCOUNT`, and `BUY_X_GET_Y`.
+- Supported types from the promotions spec and ADR 0005 are `FIXED_COMBO`, `MIXED_COMBO`, `PERCENTAGE_DISCOUNT`, and `BUY_X_GET_Y`.
 - Keep promotion evaluation deterministic and test-heavy. Priority, active dates, eligibility, and discount calculation must be explicit.
 
 ## CQRS
@@ -186,7 +194,7 @@ Testing priorities:
 
 Avoid relying only on end-to-end tests for business rules. The promotion engine, checkout totals, inventory movements, and RBAC rules need focused unit tests.
 
-The handoff requests Vitest for new Wearly code. If existing scripts still use Jest, either follow the current task's migration plan or add Vitest alongside the new module before building new tests around it.
+ADR 0008 requires Vitest for new Wearly code. If existing scripts still use Jest, either follow the current task's migration plan or add Vitest alongside the new module before building new tests around it.
 
 ## Coding Style
 
@@ -245,7 +253,7 @@ Catalog endpoint handler template:
 
 ## Persistence
 
-PostgreSQL is the database. The handoff targets Prisma, while the current repository has Drizzle scaffolding. Do not mix persistence approaches inside the same feature without an explicit migration decision.
+PostgreSQL is the database, and ADR 0004 selects Drizzle for Wearly persistence. Evolve the existing Drizzle scaffolding as bounded contexts move from in-memory adapters to PostgreSQL.
 
 Persistence rules:
 
@@ -287,13 +295,13 @@ Some current scripts still reference older paths such as `app/` while source fil
 
 ## Working Rules For Agents
 
-- Read `Handoff.md` before making domain or architecture decisions.
+- Read `docs/specs/README.md`, `docs/adr/README.md`, and the relevant linked specs and accepted ADRs before making domain or architecture decisions.
 - Preserve existing user changes.
 - Keep edits scoped to the requested feature.
 - Prefer adding tests before production code for domain behavior.
 - Do not introduce new framework dependencies without a clear reason.
 - Do not put Wearly business logic in legacy-named modules.
-- When unsure whether to follow current code or the handoff, favor the handoff for new Wearly features and mention any migration impact.
+- When current code differs from a spec or accepted ADR, follow the spec or ADR for new Wearly features and mention any migration impact.
 - Before finishing, run the most relevant tests, lint, or type checks that are available and report anything that could not be run.
 
 ## Development workflow

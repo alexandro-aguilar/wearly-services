@@ -100,7 +100,7 @@ Expected behavior:
 
 Catalog owns product and product variant persistence. Store-local uniqueness is required for SKU and barcode when barcode is present.
 
-Persistence models must remain separate from domain entities. Catalog repositories should expose domain-oriented methods and hide Prisma or Drizzle records.
+Persistence models must remain separate from domain entities. Catalog repositories should expose domain-oriented methods and hide Drizzle records.
 
 ## Authorization
 
