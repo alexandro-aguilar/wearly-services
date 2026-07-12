@@ -4,6 +4,9 @@ export type PlatformErrorCode =
   | 'FORBIDDEN'
   | 'NOT_FOUND'
   | 'CONFLICT'
+  | 'STALE_PRICING'
+  | 'INSUFFICIENT_STOCK'
+  | 'IDEMPOTENCY_CONFLICT'
   | 'INTERNAL_ERROR';
 
 export interface PlatformErrorDetail {
@@ -50,6 +53,24 @@ export class NotFoundError extends PlatformError {
 export class ConflictError extends PlatformError {
   constructor(message: string = 'Resource already exists.') {
     super('CONFLICT', message);
+  }
+}
+
+export class StalePricingError extends PlatformError {
+  constructor(message: string = 'Checkout pricing is no longer current.') {
+    super('STALE_PRICING', message);
+  }
+}
+
+export class InsufficientStockError extends PlatformError {
+  constructor(message: string = 'Insufficient stock is available to complete this sale.') {
+    super('INSUFFICIENT_STOCK', message);
+  }
+}
+
+export class IdempotencyConflictError extends PlatformError {
+  constructor(message: string = 'This idempotency key was already used with different input.') {
+    super('IDEMPOTENCY_CONFLICT', message);
   }
 }
 

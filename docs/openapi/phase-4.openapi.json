@@ -1,0 +1,409 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Wearly Services Phase 4 API",
+    "version": "1.0.0",
+    "description": "Contract foundation for server-authoritative product discovery and checkout. Monetary values are decimal strings."
+  },
+  "paths": {
+    "/api/v1/products": {
+      "get": {
+        "summary": "Discover products",
+        "parameters": [
+          { "$ref": "#/components/parameters/Query" },
+          { "$ref": "#/components/parameters/CategoryId" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Products",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProductDiscoveryPage" } } }
+          },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/variants": {
+      "get": {
+        "summary": "Discover sellable variants",
+        "parameters": [
+          { "$ref": "#/components/parameters/Query" },
+          { "$ref": "#/components/parameters/Barcode" },
+          { "$ref": "#/components/parameters/ProductId" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Variants",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VariantDiscoveryPage" } } }
+          },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/checkout/quote": {
+      "post": {
+        "summary": "Create an authoritative checkout quote",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateQuoteRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Quote",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CheckoutQuote" } } }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "403": { "$ref": "#/components/responses/Error" },
+          "404": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/sales": {
+      "post": {
+        "summary": "Complete a quote-backed sale",
+        "parameters": [{ "$ref": "#/components/parameters/IdempotencyKey" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CompleteSaleRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Completed sale",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SaleCompletion" } } }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/sales/idempotency/{key}": {
+      "get": {
+        "summary": "Get idempotency status",
+        "parameters": [{ "$ref": "#/components/parameters/IdempotencyPathKey" }],
+        "responses": {
+          "200": {
+            "description": "Idempotency status",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/IdempotencyStatus" } } }
+          },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/sales/{id}": {
+      "get": {
+        "summary": "Get a sale",
+        "parameters": [{ "$ref": "#/components/parameters/SaleId" }],
+        "responses": {
+          "200": {
+            "description": "Sale",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CompletedSale" } } }
+          },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/session": {
+      "get": {
+        "summary": "Get authenticated session context",
+        "responses": {
+          "200": {
+            "description": "Session",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SessionContext" } } }
+          },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/session/store": {
+      "post": {
+        "summary": "Select an authorized store context",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SelectSessionStoreRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated session",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SessionContext" } } }
+          },
+          "403": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "Query": { "name": "q", "in": "query", "schema": { "type": "string" } },
+      "CategoryId": { "name": "categoryId", "in": "query", "schema": { "type": "string" } },
+      "Barcode": { "name": "barcode", "in": "query", "schema": { "type": "string" } },
+      "ProductId": { "name": "productId", "in": "query", "schema": { "type": "string" } },
+      "Page": { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "default": 1 } },
+      "PageSize": {
+        "name": "pageSize",
+        "in": "query",
+        "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 25 }
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "IdempotencyPathKey": {
+        "name": "key",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "SaleId": { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+    },
+    "responses": {
+      "Error": {
+        "description": "Stable API error",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      }
+    },
+    "schemas": {
+      "Money": { "type": "string", "pattern": "^-?\\d+\\.\\d{2}$", "examples": ["499.00"] },
+      "ErrorEnvelope": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message", "details"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "VALIDATION_ERROR",
+                  "UNAUTHENTICATED",
+                  "FORBIDDEN",
+                  "NOT_FOUND",
+                  "CONFLICT",
+                  "STALE_PRICING",
+                  "INSUFFICIENT_STOCK",
+                  "IDEMPOTENCY_CONFLICT",
+                  "INTERNAL_ERROR"
+                ]
+              },
+              "message": { "type": "string" },
+              "details": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["message"],
+                  "properties": { "field": { "type": "string" }, "message": { "type": "string" } }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ProductDiscoveryItem": {
+        "type": "object",
+        "required": ["id", "name", "categoryId", "active"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "categoryId": { "type": "string" },
+          "active": { "type": "boolean" }
+        }
+      },
+      "ProductDiscoveryPage": {
+        "type": "object",
+        "required": ["items", "page", "pageSize", "total"],
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/ProductDiscoveryItem" } },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "total": { "type": "integer" }
+        }
+      },
+      "SellableVariant": {
+        "type": "object",
+        "required": ["id", "productId", "productName", "sku", "price", "stock", "stockStatus", "active"],
+        "properties": {
+          "id": { "type": "string" },
+          "productId": { "type": "string" },
+          "productName": { "type": "string" },
+          "sku": { "type": "string" },
+          "barcode": { "type": "string" },
+          "price": { "$ref": "#/components/schemas/Money" },
+          "stock": { "type": "integer", "minimum": 0 },
+          "stockStatus": { "type": "string", "enum": ["IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK", "UNAVAILABLE"] },
+          "active": { "type": "boolean" }
+        }
+      },
+      "VariantDiscoveryPage": {
+        "type": "object",
+        "required": ["items", "page", "pageSize", "total"],
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/SellableVariant" } },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "total": { "type": "integer" }
+        }
+      },
+      "CreateQuoteRequest": {
+        "type": "object",
+        "required": ["items"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["variantId", "quantity"],
+              "properties": { "variantId": { "type": "string" }, "quantity": { "type": "integer", "minimum": 1 } }
+            }
+          },
+          "manualDiscount": {
+            "type": "object",
+            "required": ["amount", "reason"],
+            "properties": {
+              "amount": { "$ref": "#/components/schemas/Money" },
+              "reason": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      },
+      "QuoteItem": {
+        "type": "object",
+        "required": ["variantId", "productName", "sku", "quantity", "unitPrice", "discount", "total"],
+        "properties": {
+          "variantId": { "type": "string" },
+          "productName": { "type": "string" },
+          "sku": { "type": "string" },
+          "quantity": { "type": "integer" },
+          "unitPrice": { "$ref": "#/components/schemas/Money" },
+          "discount": { "$ref": "#/components/schemas/Money" },
+          "total": { "$ref": "#/components/schemas/Money" }
+        }
+      },
+      "AppliedPromotion": {
+        "type": "object",
+        "required": ["id", "name", "discount"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "discount": { "$ref": "#/components/schemas/Money" }
+        }
+      },
+      "CheckoutQuote": {
+        "type": "object",
+        "required": [
+          "quoteId",
+          "expiresAt",
+          "currency",
+          "items",
+          "appliedPromotions",
+          "subtotal",
+          "discount",
+          "tax",
+          "total"
+        ],
+        "properties": {
+          "quoteId": { "type": "string" },
+          "expiresAt": { "type": "string", "format": "date-time" },
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/QuoteItem" } },
+          "appliedPromotions": { "type": "array", "items": { "$ref": "#/components/schemas/AppliedPromotion" } },
+          "subtotal": { "$ref": "#/components/schemas/Money" },
+          "discount": { "$ref": "#/components/schemas/Money" },
+          "tax": { "$ref": "#/components/schemas/Money" },
+          "total": { "$ref": "#/components/schemas/Money" }
+        }
+      },
+      "CompleteSaleRequest": {
+        "type": "object",
+        "required": ["quoteId", "paymentMethod"],
+        "properties": {
+          "quoteId": { "type": "string" },
+          "paymentMethod": { "type": "string", "enum": ["CASH", "CARD", "TRANSFER"] },
+          "tenderedAmount": { "$ref": "#/components/schemas/Money" }
+        }
+      },
+      "CompletedSale": {
+        "type": "object",
+        "required": [
+          "id",
+          "createdAt",
+          "storeId",
+          "items",
+          "appliedPromotions",
+          "paymentMethod",
+          "subtotal",
+          "discount",
+          "tax",
+          "total"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "storeId": { "type": "string" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/QuoteItem" } },
+          "appliedPromotions": { "type": "array", "items": { "$ref": "#/components/schemas/AppliedPromotion" } },
+          "paymentMethod": { "type": "string", "enum": ["CASH", "CARD", "TRANSFER"] },
+          "subtotal": { "$ref": "#/components/schemas/Money" },
+          "discount": { "$ref": "#/components/schemas/Money" },
+          "tax": { "$ref": "#/components/schemas/Money" },
+          "total": { "$ref": "#/components/schemas/Money" },
+          "changeAmount": { "$ref": "#/components/schemas/Money" }
+        }
+      },
+      "SaleCompletion": {
+        "type": "object",
+        "required": ["sale"],
+        "properties": { "sale": { "$ref": "#/components/schemas/CompletedSale" } }
+      },
+      "IdempotencyStatus": {
+        "type": "object",
+        "required": ["key", "status"],
+        "properties": {
+          "key": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "enum": ["PENDING", "COMPLETED", "FAILED"] },
+          "sale": { "$ref": "#/components/schemas/CompletedSale" }
+        }
+      },
+      "SessionStore": {
+        "type": "object",
+        "required": ["id", "name", "role"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "role": { "type": "string", "enum": ["ADMIN", "MANAGER", "CASHIER"] }
+        }
+      },
+      "SelectSessionStoreRequest": {
+        "type": "object",
+        "required": ["storeId"],
+        "properties": { "storeId": { "type": "string" } }
+      },
+      "SessionContext": {
+        "type": "object",
+        "required": ["user", "role", "store", "currency", "timeZone", "availableStores"],
+        "properties": {
+          "user": {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+              "id": { "type": "string" },
+              "email": { "type": "string", "format": "email" },
+              "name": { "type": "string" }
+            }
+          },
+          "role": { "type": "string", "enum": ["ADMIN", "MANAGER", "CASHIER"] },
+          "store": { "$ref": "#/components/schemas/SessionStore" },
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "timeZone": { "type": "string" },
+          "availableStores": { "type": "array", "items": { "$ref": "#/components/schemas/SessionStore" } }
+        }
+      }
+    }
+  }
+}

@@ -25,11 +25,9 @@ const responseHandler = (): MiddlewareObj<APIGatewayProxyEventV2, APIGatewayProx
   return {
     after: (request) => {
       const { response } = request;
-      console.log('Response body is an object:', response);
       if (!response) return;
 
       if (response.body && typeof response.body === 'object') {
-        console.log('Response body is an object:', response.body);
         // Format the response
         response.body = JSON.stringify({
           body: response.body,
@@ -102,6 +100,9 @@ function statusCodeForPlatformError(code: PlatformErrorCode): number {
     case 'NOT_FOUND':
       return 404;
     case 'CONFLICT':
+    case 'STALE_PRICING':
+    case 'INSUFFICIENT_STOCK':
+    case 'IDEMPOTENCY_CONFLICT':
       return 409;
     case 'INTERNAL_ERROR':
       return 500;

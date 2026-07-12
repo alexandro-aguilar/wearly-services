@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   ConflictError,
   ForbiddenError,
+  IdempotencyConflictError,
+  InsufficientStockError,
   InternalError,
   NotFoundError,
   PlatformError,
+  StalePricingError,
   UnauthenticatedError,
   ValidationError,
 } from '@src/shared/domain/exceptions/PlatformError';
@@ -16,6 +19,9 @@ describe('platform domain exceptions', () => {
     [new ForbiddenError(), 'FORBIDDEN'],
     [new NotFoundError(), 'NOT_FOUND'],
     [new ConflictError(), 'CONFLICT'],
+    [new StalePricingError(), 'STALE_PRICING'],
+    [new InsufficientStockError(), 'INSUFFICIENT_STOCK'],
+    [new IdempotencyConflictError(), 'IDEMPOTENCY_CONFLICT'],
     [new InternalError(), 'INTERNAL_ERROR'],
   ])('sets a stable error code for %s', (error, code) => {
     expect(error).toBeInstanceOf(PlatformError);

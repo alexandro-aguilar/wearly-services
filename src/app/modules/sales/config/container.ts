@@ -48,6 +48,20 @@ import { InMemoryPromotionRepository } from '@src/app/modules/promotions/infrast
 import { PromotionCheckoutAdapter } from '@src/app/modules/promotions/infrastructure/services/PromotionCheckoutAdapter';
 import { InMemoryCustomerRepository } from '@src/app/modules/customers/infrastructure/repositories/in-memory/InMemoryCustomerRepository';
 import { CustomerCheckoutAdapter } from '@src/app/modules/customers/infrastructure/services/CustomerCheckoutAdapter';
+import { CreateCheckoutQuoteHandler } from '@src/app/modules/sales/application/commands/CreateCheckoutQuoteHandler';
+import {
+  CheckoutCatalogGateway,
+  CheckoutPromotionGateway,
+  CheckoutPricingService as CheckoutPricingServicePort,
+  CheckoutQuoteRepository,
+  SaleIdempotencyRepository,
+} from '@src/app/modules/sales/application/ports/CheckoutQuotePorts';
+import { InMemoryCheckoutQuoteRepository } from '@src/app/modules/sales/infrastructure/repositories/in-memory/InMemoryCheckoutQuoteRepository';
+import { CheckoutPricingService } from '@src/app/modules/sales/infrastructure/services/CheckoutPricingService';
+import { CatalogCheckoutGateway } from '@src/app/modules/sales/infrastructure/services/CatalogCheckoutGateway';
+import { PromotionQuoteAdapter } from '@src/app/modules/sales/infrastructure/services/PromotionQuoteAdapter';
+import { InMemorySaleIdempotencyRepository } from '@src/app/modules/sales/infrastructure/repositories/in-memory/InMemorySaleIdempotencyRepository';
+import { CompleteQuoteSaleHandler } from '@src/app/modules/sales/application/commands/CompleteQuoteSaleHandler';
 
 const container = new Container();
 
@@ -113,6 +127,68 @@ container
   )
   .inSingletonScope();
 container.bind<InMemorySaleRepository>(types.SaleRepository).to(InMemorySaleRepository).inSingletonScope();
+container
+  .bind<CheckoutQuoteRepository>(types.CheckoutQuoteRepository)
+  .to(InMemoryCheckoutQuoteRepository)
+  .inSingletonScope();
+container
+  .bind<SaleIdempotencyRepository>(types.SaleIdempotencyRepository)
+  .to(InMemorySaleIdempotencyRepository)
+  .inSingletonScope();
+container
+  .bind<CheckoutCatalogGateway>(types.CheckoutCatalogGateway)
+  .toDynamicValue(
+    (context) =>
+      new CatalogCheckoutGateway(
+        context.get<ProductVariantRepository>(types.SalesProductVariantRepository),
+        context.get<ProductRepository>(types.SalesProductRepository)
+      )
+  )
+  .inSingletonScope();
+container
+  .bind<CheckoutPromotionGateway>(types.CheckoutPromotionGateway)
+  .toDynamicValue(() => new PromotionQuoteAdapter(new EvaluatePromotionsHandler(new InMemoryPromotionRepository())))
+  .inSingletonScope();
+container
+  .bind<CheckoutPricingServicePort>(types.CheckoutPricingService)
+  .toDynamicValue(
+    (context) =>
+      new CheckoutPricingService(
+        context.get<CheckoutCatalogGateway>(types.CheckoutCatalogGateway),
+        context.get<SalesInventoryGateway>(types.SalesInventoryGateway),
+        context.get<CheckoutPromotionGateway>(types.CheckoutPromotionGateway)
+      )
+  )
+  .inSingletonScope();
+container
+  .bind<CreateCheckoutQuoteHandler>(types.CreateCheckoutQuoteHandler)
+  .toDynamicValue(
+    (context) =>
+      new CreateCheckoutQuoteHandler(
+        context.get<CheckoutQuoteRepository>(types.CheckoutQuoteRepository),
+        context.get<CheckoutPricingServicePort>(types.CheckoutPricingService),
+        context.get<SalesClock>(types.SalesClock),
+        { nextId: () => context.get<SalesIdGenerator>(types.SalesIdGenerator).nextId('sale') }
+      )
+  )
+  .inSingletonScope();
+container
+  .bind<CompleteQuoteSaleHandler>(types.CompleteQuoteSaleHandler)
+  .toDynamicValue(
+    (context) =>
+      new CompleteQuoteSaleHandler(
+        context.get<CheckoutQuoteRepository>(types.CheckoutQuoteRepository),
+        context.get<SaleIdempotencyRepository>(types.SaleIdempotencyRepository),
+        context.get<CheckoutPricingServicePort>(types.CheckoutPricingService),
+        context.get<SalesInventoryGateway>(types.SalesInventoryGateway),
+        context.get<SaleRepository>(types.SaleRepository),
+        context.get<CheckoutTransactionManager>(types.CheckoutTransactionManager),
+        context.get<SalesAuthorizationPolicy>(types.SalesAuthorizationPolicy),
+        context.get<SalesClock>(types.SalesClock),
+        context.get<SalesIdGenerator>(types.SalesIdGenerator)
+      )
+  )
+  .inSingletonScope();
 container
   .bind<CheckoutTransactionManager>(types.CheckoutTransactionManager)
   .toDynamicValue(

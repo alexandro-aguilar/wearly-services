@@ -17,14 +17,23 @@ export class InMemoryProductVariantRepository implements ProductVariantRepositor
   }
 
   async list(storeId: string, filter: ListProductVariantsFilter): Promise<ProductVariantSnapshot[]> {
-    return [...this.store.variants.values()]
+    const query = filter.q?.trim().toLocaleLowerCase();
+    const variants = [...this.store.variants.values()]
       .filter((variant) => variant.storeId === storeId)
       .filter((variant) => filter.productId === undefined || variant.productId === filter.productId)
       .filter((variant) => filter.sku === undefined || variant.sku === filter.sku)
       .filter((variant) => filter.barcode === undefined || variant.barcode === filter.barcode)
+      .filter(
+        (variant) =>
+          !query ||
+          variant.sku.toLocaleLowerCase().includes(query) ||
+          variant.barcode?.toLocaleLowerCase().includes(query)
+      )
       .filter((variant) => filter.active === undefined || variant.active === filter.active)
       .filter((variant) => filter.lowStock === undefined || filter.lowStock === variant.stock <= variant.minimumStock)
-      .map((variant) => cloneVariant(variant));
+      .sort((left, right) => left.id.localeCompare(right.id));
+
+    return paginate(variants, filter).map((variant) => cloneVariant(variant));
   }
 
   async save(variant: ProductVariantSnapshot): Promise<void> {
@@ -42,4 +51,14 @@ export class InMemoryProductVariantRepository implements ProductVariantRepositor
       (variant) => variant.storeId === storeId && variant.barcode === barcode && variant.id !== excludingVariantId
     );
   }
+}
+
+function paginate<TItem>(
+  items: readonly TItem[],
+  filter: { readonly page?: number; readonly pageSize?: number }
+): readonly TItem[] {
+  if (filter.page === undefined && filter.pageSize === undefined) return items;
+  const page = filter.page ?? 1;
+  const pageSize = filter.pageSize ?? 25;
+  return items.slice((page - 1) * pageSize, page * pageSize);
 }

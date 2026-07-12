@@ -14,13 +14,28 @@ export class InMemoryProductRepository implements ProductRepository {
   }
 
   async list(storeId: string, filter: ListProductsFilter): Promise<ProductSnapshot[]> {
-    return [...this.store.products.values()]
+    const query = filter.q?.trim().toLocaleLowerCase();
+    const products = [...this.store.products.values()]
       .filter((product) => product.storeId === storeId)
+      .filter((product) => filter.categoryId === undefined || product.categoryId === filter.categoryId)
+      .filter((product) => !query || product.name.toLocaleLowerCase().includes(query))
       .filter((product) => filter.active === undefined || product.active === filter.active)
-      .map((product) => cloneProduct(product));
+      .sort((left, right) => left.name.localeCompare(right.name) || left.id.localeCompare(right.id));
+
+    return paginate(products, filter).map((product) => cloneProduct(product));
   }
 
   async save(product: ProductSnapshot): Promise<void> {
     this.store.products.set(inMemoryCatalogKey(product.storeId, product.id), cloneProduct(product));
   }
+}
+
+function paginate<TItem>(
+  items: readonly TItem[],
+  filter: { readonly page?: number; readonly pageSize?: number }
+): readonly TItem[] {
+  if (filter.page === undefined && filter.pageSize === undefined) return items;
+  const page = filter.page ?? 1;
+  const pageSize = filter.pageSize ?? 25;
+  return items.slice((page - 1) * pageSize, page * pageSize);
 }

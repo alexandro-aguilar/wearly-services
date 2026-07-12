@@ -8,6 +8,8 @@ import { GetProductByIdHandler } from '@src/app/modules/catalog/application/quer
 import { GetProductVariantByIdHandler } from '@src/app/modules/catalog/application/queries/GetProductVariantByIdHandler';
 import { ListProductVariantsHandler } from '@src/app/modules/catalog/application/queries/ListProductVariantsHandler';
 import { ListProductsHandler } from '@src/app/modules/catalog/application/queries/ListProductsHandler';
+import { DiscoverProductsHandler } from '@src/app/modules/catalog/application/queries/DiscoverProductsHandler';
+import { DiscoverVariantsHandler } from '@src/app/modules/catalog/application/queries/DiscoverVariantsHandler';
 
 export interface CatalogHandlers {
   readonly createProduct: CreateProductHandler;
@@ -18,6 +20,8 @@ export interface CatalogHandlers {
   readonly deactivateProductVariant: DeactivateProductVariantHandler;
   readonly getProductById: GetProductByIdHandler;
   readonly listProducts: ListProductsHandler;
+  readonly discoverProducts: DiscoverProductsHandler;
   readonly getProductVariantById: GetProductVariantByIdHandler;
   readonly listProductVariants: ListProductVariantsHandler;
+  readonly discoverVariants: DiscoverVariantsHandler;
 }

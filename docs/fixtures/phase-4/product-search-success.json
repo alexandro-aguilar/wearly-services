@@ -1,0 +1,6 @@
+{
+  "items": [{ "id": "product_linen_shirt", "name": "Linen shirt", "categoryId": "category_shirts", "active": true }],
+  "page": 1,
+  "pageSize": 25,
+  "total": 1
+}

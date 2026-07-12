@@ -10,14 +10,17 @@ import TracerService from '@src/app/core/utils/TracerService';
 import types from '../../config/types';
 import MetricsService from '@src/app/core/utils/MetricsService';
 import ILogger from '@src/app/core/utils/ILogger';
-import { ListProductsHandler } from '../../application/queries/ListProductsHandler';
+import { DiscoverProductsHandler } from '../../application/queries/DiscoverProductsHandler';
 import Joi from '@hapi/joi';
 import Authorization from '@src/app/core/interface/Authorization';
-import { ProductSnapshot } from '@src/app/modules/catalog/domain/Product';
+import { ProductDiscoveryResultDto } from '@src/app/modules/catalog/application/dtos/ProductDiscoveryDto';
 
 const listProductsEndpointHandlerSchema: ValidatorSchemas = {
   queryStringParameters: Joi.object({
-    active: Joi.boolean().optional(),
+    q: Joi.string().trim().optional(),
+    categoryId: Joi.string().trim().optional(),
+    page: Joi.number().integer().min(1).optional(),
+    pageSize: Joi.number().integer().min(1).max(100).optional(),
   }).optional(),
 };
 
@@ -29,17 +32,16 @@ export const handler = middy(
   async (
     event: APIGatewayProxyEventV2,
     context: Context
-  ): Promise<APIGatewayProxyResultV2<{ products: ProductSnapshot[] }>> => {
+  ): Promise<APIGatewayProxyResultV2<ProductDiscoveryResultDto>> => {
     logger.addContext({ requestId: context.awsRequestId });
     const authenticatedPrincipal = await Authorization.authenticate(event.headers);
-    const listProductsHandler = container.get<ListProductsHandler>(types.ListProductsHandler);
-    const response = await listProductsHandler.execute(authenticatedPrincipal, {
-      active: event.queryStringParameters?.active as boolean | undefined,
+    const discoverProductsHandler = container.get<DiscoverProductsHandler>(types.DiscoverProductsHandler);
+    return discoverProductsHandler.execute(authenticatedPrincipal, {
+      q: event.queryStringParameters?.q,
+      categoryId: event.queryStringParameters?.categoryId,
+      page: event.queryStringParameters?.page as number | undefined,
+      pageSize: event.queryStringParameters?.pageSize as number | undefined,
     });
-
-    return {
-      products: response,
-    };
   }
 )
   .use(requestValidator(listProductsEndpointHandlerSchema))

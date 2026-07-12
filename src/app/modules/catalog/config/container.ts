@@ -12,8 +12,10 @@ import { CreateProductVariantHandler } from '@src/app/modules/catalog/applicatio
 import { UpdateProductVariantHandler } from '@src/app/modules/catalog/application/commands/UpdateProductVariantHandler';
 import { DeactivateProductVariantHandler } from '@src/app/modules/catalog/application/commands/DeactivateProductVariantHandler';
 import { ListProductsHandler } from '@src/app/modules/catalog/application/queries/ListProductsHandler';
+import { DiscoverProductsHandler } from '@src/app/modules/catalog/application/queries/DiscoverProductsHandler';
 import { GetProductByIdHandler } from '@src/app/modules/catalog/application/queries/GetProductByIdHandler';
 import { ListProductVariantsHandler } from '@src/app/modules/catalog/application/queries/ListProductVariantsHandler';
+import { DiscoverVariantsHandler } from '@src/app/modules/catalog/application/queries/DiscoverVariantsHandler';
 import { GetProductVariantByIdHandler } from '@src/app/modules/catalog/application/queries/GetProductVariantByIdHandler';
 import {
   CatalogAuthorizationPolicy,
@@ -23,6 +25,7 @@ import {
 import {
   ProductRepository,
   ProductVariantRepository,
+  CatalogDiscoveryReadRepository,
 } from '@src/app/modules/catalog/application/ports/CatalogRepositories';
 import {
   InMemoryCatalogStore,
@@ -30,6 +33,7 @@ import {
 } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryCatalogStore';
 import { InMemoryProductRepository } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryProductRepository';
 import { InMemoryProductVariantRepository } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryProductVariantRepository';
+import { InMemoryCatalogDiscoveryRepository } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryCatalogDiscoveryRepository';
 import ILogger from '@src/app/core/utils/ILogger';
 import { SystemClock } from '@src/shared/application/Clock';
 
@@ -53,6 +57,12 @@ container
   .bind<ProductVariantRepository>(types.ProductVariantRepository)
   .toDynamicValue(
     (context) => new InMemoryProductVariantRepository(context.get<InMemoryCatalogStore>(types.CatalogStore))
+  )
+  .inSingletonScope();
+container
+  .bind<CatalogDiscoveryReadRepository>(types.CatalogDiscoveryReadRepository)
+  .toDynamicValue(
+    (context) => new InMemoryCatalogDiscoveryRepository(context.get<InMemoryCatalogStore>(types.CatalogStore))
   )
   .inSingletonScope();
 
@@ -96,6 +106,16 @@ container
     (context) =>
       new ListProductsHandler(
         context.get<ProductRepository>(types.ProductRepository),
+        context.get<CatalogAuthorizationPolicy>(types.CatalogAuthorizationPolicy)
+      )
+  )
+  .inSingletonScope();
+container
+  .bind<DiscoverProductsHandler>(types.DiscoverProductsHandler)
+  .toDynamicValue(
+    (context) =>
+      new DiscoverProductsHandler(
+        context.get<CatalogDiscoveryReadRepository>(types.CatalogDiscoveryReadRepository),
         context.get<CatalogAuthorizationPolicy>(types.CatalogAuthorizationPolicy)
       )
   )
@@ -151,6 +171,16 @@ container
     (context) =>
       new ListProductVariantsHandler(
         context.get<ProductVariantRepository>(types.ProductVariantRepository),
+        context.get<CatalogAuthorizationPolicy>(types.CatalogAuthorizationPolicy)
+      )
+  )
+  .inSingletonScope();
+container
+  .bind<DiscoverVariantsHandler>(types.DiscoverVariantsHandler)
+  .toDynamicValue(
+    (context) =>
+      new DiscoverVariantsHandler(
+        context.get<CatalogDiscoveryReadRepository>(types.CatalogDiscoveryReadRepository),
         context.get<CatalogAuthorizationPolicy>(types.CatalogAuthorizationPolicy)
       )
   )

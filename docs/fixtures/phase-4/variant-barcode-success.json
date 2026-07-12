@@ -1,0 +1,18 @@
+{
+  "items": [
+    {
+      "id": "variant_linen_shirt_m",
+      "productId": "product_linen_shirt",
+      "productName": "Linen shirt",
+      "sku": "SHIRT-LINEN-M",
+      "barcode": "1234567890123",
+      "price": "499.00",
+      "stock": 8,
+      "stockStatus": "IN_STOCK",
+      "active": true
+    }
+  ],
+  "page": 1,
+  "pageSize": 25,
+  "total": 1
+}

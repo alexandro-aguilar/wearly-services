@@ -1,0 +1,8 @@
+{
+  "user": { "id": "user_cashier_001", "email": "cashier@example.com", "name": "Cashier One" },
+  "role": "CASHIER",
+  "store": { "id": "store_merida", "name": "Wearly Mérida", "role": "CASHIER" },
+  "currency": "MXN",
+  "timeZone": "America/Merida",
+  "availableStores": [{ "id": "store_merida", "name": "Wearly Mérida", "role": "CASHIER" }]
+}

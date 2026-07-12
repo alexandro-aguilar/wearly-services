@@ -10,18 +10,18 @@ import TracerService from '@src/app/core/utils/TracerService';
 import types from '../../config/types';
 import MetricsService from '@src/app/core/utils/MetricsService';
 import ILogger from '@src/app/core/utils/ILogger';
-import { ListProductVariantsHandler } from '../../application/queries/ListProductVariantsHandler';
+import { DiscoverVariantsHandler } from '../../application/queries/DiscoverVariantsHandler';
 import Joi from '@hapi/joi';
 import Authorization from '@src/app/core/interface/Authorization';
-import { ProductVariantSnapshot } from '@src/app/modules/catalog/domain/ProductVariant';
+import { VariantDiscoveryResultDto } from '@src/app/modules/catalog/application/dtos/ProductDiscoveryDto';
 
 const listProductVariantsEndpointHandlerSchema: ValidatorSchemas = {
   queryStringParameters: Joi.object({
     productId: Joi.string().optional(),
-    sku: Joi.string().optional(),
+    q: Joi.string().trim().optional(),
     barcode: Joi.string().optional(),
-    active: Joi.boolean().optional(),
-    lowStock: Joi.boolean().optional(),
+    page: Joi.number().integer().min(1).optional(),
+    pageSize: Joi.number().integer().min(1).max(100).optional(),
   }).optional(),
 };
 
@@ -33,21 +33,17 @@ export const handler = middy(
   async (
     event: APIGatewayProxyEventV2,
     context: Context
-  ): Promise<APIGatewayProxyResultV2<{ variants: ProductVariantSnapshot[] }>> => {
+  ): Promise<APIGatewayProxyResultV2<VariantDiscoveryResultDto>> => {
     logger.addContext({ requestId: context.awsRequestId });
     const authenticatedPrincipal = await Authorization.authenticate(event.headers);
-    const listProductVariantsHandler = container.get<ListProductVariantsHandler>(types.ListProductVariantsHandler);
-    const response = await listProductVariantsHandler.execute(authenticatedPrincipal, {
+    const discoverVariantsHandler = container.get<DiscoverVariantsHandler>(types.DiscoverVariantsHandler);
+    return discoverVariantsHandler.execute(authenticatedPrincipal, {
       productId: event.queryStringParameters?.productId,
-      sku: event.queryStringParameters?.sku,
+      q: event.queryStringParameters?.q,
       barcode: event.queryStringParameters?.barcode,
-      active: event.queryStringParameters?.active as boolean | undefined,
-      lowStock: event.queryStringParameters?.lowStock as boolean | undefined,
+      page: event.queryStringParameters?.page as number | undefined,
+      pageSize: event.queryStringParameters?.pageSize as number | undefined,
     });
-
-    return {
-      variants: response,
-    };
   }
 )
   .use(requestValidator(listProductVariantsEndpointHandlerSchema))

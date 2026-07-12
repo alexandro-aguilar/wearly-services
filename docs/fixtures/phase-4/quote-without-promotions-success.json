@@ -1,0 +1,21 @@
+{
+  "quoteId": "quote_linen_001",
+  "expiresAt": "2026-07-11T20:00:00.000Z",
+  "currency": "MXN",
+  "items": [
+    {
+      "variantId": "variant_linen_shirt_m",
+      "productName": "Linen shirt",
+      "sku": "SHIRT-LINEN-M",
+      "quantity": 2,
+      "unitPrice": "499.00",
+      "discount": "0.00",
+      "total": "998.00"
+    }
+  ],
+  "appliedPromotions": [],
+  "subtotal": "998.00",
+  "discount": "0.00",
+  "tax": "0.00",
+  "total": "998.00"
+}

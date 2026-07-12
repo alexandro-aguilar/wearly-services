@@ -1,0 +1,27 @@
+{
+  "key": "7c6491a2-9b7c-4824-ab2f-3dd4a5813a22",
+  "status": "COMPLETED",
+  "sale": {
+    "id": "sale_linen_001",
+    "createdAt": "2026-07-11T19:56:00.000Z",
+    "storeId": "store_merida",
+    "items": [
+      {
+        "variantId": "variant_linen_shirt_m",
+        "productName": "Linen shirt",
+        "sku": "SHIRT-LINEN-M",
+        "quantity": 2,
+        "unitPrice": "499.00",
+        "discount": "50.00",
+        "total": "948.00"
+      }
+    ],
+    "appliedPromotions": [{ "id": "promotion_two_shirts", "name": "Two shirts", "discount": "50.00" }],
+    "paymentMethod": "CASH",
+    "subtotal": "998.00",
+    "discount": "50.00",
+    "tax": "0.00",
+    "total": "948.00",
+    "changeAmount": "52.00"
+  }
+}

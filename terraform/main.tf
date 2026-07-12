@@ -31,6 +31,9 @@ locals {
     daily_sales_report       = { handler = "GetDailySalesReportEndpointHandler" }
     low_stock_report         = { handler = "GetLowStockReportEndpointHandler" }
     complete_sale            = { handler = "CompleteSaleEndpointHandler" }
+    complete_quote_sale      = { handler = "CompleteQuoteSaleEndpointHandler" }
+    get_sale_idempotency     = { handler = "GetSaleIdempotencyEndpointHandler" }
+    create_checkout_quote    = { handler = "CreateCheckoutQuoteEndpointHandler" }
     get_sale                 = { handler = "GetSaleByIdEndpointHandler" }
     list_sales               = { handler = "ListSalesEndpointHandler" }
   }
@@ -60,7 +63,9 @@ locals {
     "GET /api/v1/reports/daily-sales"    = "daily_sales_report"
     "GET /api/v1/reports/low-stock"      = "low_stock_report"
     "GET /api/v1/sales"                  = "list_sales"
-    "POST /api/v1/sales"                 = "complete_sale"
+    "POST /api/v1/sales"                 = "complete_quote_sale"
+    "GET /api/v1/sales/idempotency/{key}" = "get_sale_idempotency"
+    "POST /api/v1/checkout/quote"        = "create_checkout_quote"
     "GET /api/v1/sales/{id}"             = "get_sale"
   }
 }

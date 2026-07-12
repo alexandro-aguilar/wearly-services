@@ -1,0 +1,32 @@
+{
+  "invalidQuantity": {
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "message": "Sale item quantity must be a positive integer.",
+      "details": [{ "field": "items[0].quantity", "message": "Must be greater than zero." }]
+    }
+  },
+  "inactiveVariant": { "error": { "code": "NOT_FOUND", "message": "Product variant was not found.", "details": [] } },
+  "outOfStock": {
+    "error": {
+      "code": "INSUFFICIENT_STOCK",
+      "message": "Insufficient stock is available to complete this sale.",
+      "details": []
+    }
+  },
+  "manualDiscountForbidden": {
+    "error": { "code": "FORBIDDEN", "message": "You are not allowed to apply a manual discount.", "details": [] }
+  },
+  "stalePricing": {
+    "error": { "code": "STALE_PRICING", "message": "Checkout pricing is no longer current.", "details": [] }
+  },
+  "idempotencyConflict": {
+    "error": {
+      "code": "IDEMPOTENCY_CONFLICT",
+      "message": "This idempotency key was already used with different input.",
+      "details": []
+    }
+  },
+  "storeIsolation": { "error": { "code": "NOT_FOUND", "message": "Sale was not found.", "details": [] } },
+  "rbac": { "error": { "code": "FORBIDDEN", "message": "You are not allowed to perform this action.", "details": [] } }
+}
