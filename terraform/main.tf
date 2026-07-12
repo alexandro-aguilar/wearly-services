@@ -5,6 +5,7 @@ locals {
     var.cognito_issuer_override,
     var.use_localstack ? "http://cognito-idp.${var.aws_region}.localhost.localstack.cloud:4566/${aws_cognito_user_pool.api.id}" : "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.api.id}"
   )
+  database_secret = var.database_secret_arn == null ? {} : jsondecode(data.aws_secretsmanager_secret_version.database[0].secret_string)
 
   lambdas = {
     create_product           = { handler = "CreateProductEndpointHandler" }
@@ -33,41 +34,50 @@ locals {
     complete_sale            = { handler = "CompleteSaleEndpointHandler" }
     complete_quote_sale      = { handler = "CompleteQuoteSaleEndpointHandler" }
     get_sale_idempotency     = { handler = "GetSaleIdempotencyEndpointHandler" }
+    get_session              = { handler = "GetSessionEndpointHandler" }
+    select_session_store     = { handler = "SelectSessionStoreEndpointHandler" }
     create_checkout_quote    = { handler = "CreateCheckoutQuoteEndpointHandler" }
     get_sale                 = { handler = "GetSaleByIdEndpointHandler" }
     list_sales               = { handler = "ListSalesEndpointHandler" }
   }
 
   routes = {
-    "GET /api/v1/products"               = "list_products"
-    "POST /api/v1/products"              = "create_product"
-    "GET /api/v1/products/{id}"          = "get_product"
-    "PATCH /api/v1/products/{id}"        = "update_product"
-    "DELETE /api/v1/products/{id}"       = "deactivate_product"
-    "GET /api/v1/variants"               = "list_variants"
-    "POST /api/v1/variants"              = "create_variant"
-    "GET /api/v1/variants/{id}"          = "get_variant"
-    "PATCH /api/v1/variants/{id}"        = "update_variant"
-    "DELETE /api/v1/variants/{id}"       = "deactivate_variant"
-    "GET /api/v1/customers"              = "list_customers"
-    "POST /api/v1/customers"             = "create_customer"
-    "PATCH /api/v1/customers/{id}"       = "update_customer"
-    "GET /api/v1/customers/{id}/sales"   = "customer_sales_history"
-    "GET /api/v1/inventory"              = "get_inventory"
-    "POST /api/v1/inventory/adjustments" = "adjust_inventory"
-    "GET /api/v1/inventory/movements"    = "list_inventory_movements"
-    "GET /api/v1/promotions"             = "list_promotions"
-    "POST /api/v1/promotions"            = "create_promotion"
-    "PATCH /api/v1/promotions/{id}"      = "update_promotion"
-    "GET /api/v1/reports/best-sellers"   = "best_sellers_report"
-    "GET /api/v1/reports/daily-sales"    = "daily_sales_report"
-    "GET /api/v1/reports/low-stock"      = "low_stock_report"
-    "GET /api/v1/sales"                  = "list_sales"
-    "POST /api/v1/sales"                 = "complete_quote_sale"
+    "GET /api/v1/products"                = "list_products"
+    "POST /api/v1/products"               = "create_product"
+    "GET /api/v1/products/{id}"           = "get_product"
+    "PATCH /api/v1/products/{id}"         = "update_product"
+    "DELETE /api/v1/products/{id}"        = "deactivate_product"
+    "GET /api/v1/variants"                = "list_variants"
+    "POST /api/v1/variants"               = "create_variant"
+    "GET /api/v1/variants/{id}"           = "get_variant"
+    "PATCH /api/v1/variants/{id}"         = "update_variant"
+    "DELETE /api/v1/variants/{id}"        = "deactivate_variant"
+    "GET /api/v1/customers"               = "list_customers"
+    "POST /api/v1/customers"              = "create_customer"
+    "PATCH /api/v1/customers/{id}"        = "update_customer"
+    "GET /api/v1/customers/{id}/sales"    = "customer_sales_history"
+    "GET /api/v1/inventory"               = "get_inventory"
+    "POST /api/v1/inventory/adjustments"  = "adjust_inventory"
+    "GET /api/v1/inventory/movements"     = "list_inventory_movements"
+    "GET /api/v1/promotions"              = "list_promotions"
+    "POST /api/v1/promotions"             = "create_promotion"
+    "PATCH /api/v1/promotions/{id}"       = "update_promotion"
+    "GET /api/v1/reports/best-sellers"    = "best_sellers_report"
+    "GET /api/v1/reports/daily-sales"     = "daily_sales_report"
+    "GET /api/v1/reports/low-stock"       = "low_stock_report"
+    "GET /api/v1/sales"                   = "list_sales"
+    "POST /api/v1/sales"                  = "complete_quote_sale"
     "GET /api/v1/sales/idempotency/{key}" = "get_sale_idempotency"
-    "POST /api/v1/checkout/quote"        = "create_checkout_quote"
-    "GET /api/v1/sales/{id}"             = "get_sale"
+    "GET /api/v1/session"                 = "get_session"
+    "POST /api/v1/session/store"          = "select_session_store"
+    "POST /api/v1/checkout/quote"         = "create_checkout_quote"
+    "GET /api/v1/sales/{id}"              = "get_sale"
   }
+}
+
+data "aws_secretsmanager_secret_version" "database" {
+  count     = var.database_secret_arn == null ? 0 : 1
+  secret_id = var.database_secret_arn
 }
 
 resource "aws_cognito_user_pool" "api" {
@@ -176,12 +186,19 @@ resource "aws_lambda_function" "api" {
   timeout          = var.lambda_timeout_seconds
 
   environment {
-    variables = {
+    variables = merge({
       COGNITO_ISSUER              = local.cognito_issuer
       COGNITO_USER_POOL_CLIENT_ID = aws_cognito_user_pool_client.api.id
       POWERTOOLS_SERVICE_NAME     = local.name_prefix
       STAGE                       = var.environment
-    }
+      CHECKOUT_PERSISTENCE        = var.checkout_persistence_mode
+      }, var.database_secret_arn == null ? {} : {
+      DB_HOST     = local.database_secret.DB_HOST
+      DB_PORT     = local.database_secret.DB_PORT
+      DB_USER     = local.database_secret.DB_USER
+      DB_PASSWORD = local.database_secret.DB_PASSWORD
+      DB_NAME     = local.database_secret.DB_NAME
+    })
   }
 
   depends_on = [aws_iam_role_policy.lambda_logs, aws_cloudwatch_log_group.lambda]

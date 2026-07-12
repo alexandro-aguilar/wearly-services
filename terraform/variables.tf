@@ -50,3 +50,21 @@ variable "lambda_timeout_seconds" {
   description = "Timeout allocated to each API Lambda."
   default     = 15
 }
+
+variable "database_secret_arn" {
+  type        = string
+  description = "Secrets Manager ARN containing DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, and DB_NAME."
+  default     = null
+  nullable    = true
+  sensitive   = true
+}
+
+variable "checkout_persistence_mode" {
+  type        = string
+  description = "Checkout persistence adapter: memory for local development or drizzle for PostgreSQL."
+  default     = "memory"
+  validation {
+    condition     = contains(["memory", "drizzle"], var.checkout_persistence_mode)
+    error_message = "checkout_persistence_mode must be memory or drizzle."
+  }
+}

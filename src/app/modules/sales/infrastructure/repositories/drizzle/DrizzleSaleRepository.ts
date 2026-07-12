@@ -1,11 +1,15 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { db } from '@src/app/core/infrastructure/database/postgres-drizzle.config';
+import { CheckoutTransactionContext } from '@src/app/modules/sales/infrastructure/database/CheckoutTransactionContext';
 import { saleItems, sales } from '@src/app/core/infrastructure/database/schema';
 import { SaleRepository } from '@src/app/modules/sales/application/ports/SalesRepositories';
 import { SaleSnapshot } from '@src/app/modules/sales/domain/Sale';
 
 export class DrizzleSaleRepository implements SaleRepository {
-  constructor(private readonly database: typeof db = db) {}
+  constructor(private readonly override?: typeof db) {}
+  private get database(): typeof db {
+    return this.override ?? CheckoutTransactionContext.current();
+  }
   async save(sale: SaleSnapshot): Promise<void> {
     await this.database.insert(sales).values({
       id: sale.id,

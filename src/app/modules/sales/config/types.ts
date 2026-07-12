@@ -21,6 +21,7 @@ const types = {
   CreateCheckoutQuoteHandler: Symbol.for('CreateCheckoutQuoteHandler'),
   SaleIdempotencyRepository: Symbol.for('SaleIdempotencyRepository'),
   CompleteQuoteSaleHandler: Symbol.for('CompleteQuoteSaleHandler'),
+  CheckoutSaleRevalidator: Symbol.for('CheckoutSaleRevalidator'),
   SaleRepository: Symbol.for('SaleRepository'),
   CheckoutTransactionManager: Symbol.for('CheckoutTransactionManager'),
   CompleteSaleHandler: Symbol.for('CompleteSaleHandler'),

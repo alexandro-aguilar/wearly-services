@@ -10,6 +10,7 @@ import { responseHandler } from '@src/app/core/middleware/responseHandler';
 import ILogger from '@src/app/core/utils/ILogger';
 import MetricsService from '@src/app/core/utils/MetricsService';
 import TracerService from '@src/app/core/utils/TracerService';
+import { ValidationError } from '@src/shared/domain/exceptions/PlatformError';
 import { CompleteQuoteSaleHandler } from '@src/app/modules/sales/application/commands/CompleteQuoteSaleHandler';
 import { CompletedSaleDto } from '@src/app/modules/sales/application/dtos/CheckoutDto';
 import container from '@src/app/modules/sales/config/container';
@@ -20,7 +21,13 @@ const schema: ValidatorSchemas = {
     paymentMethod: Joi.string().valid('CASH', 'CARD', 'TRANSFER').required(),
     tenderedAmount: Joi.string()
       .pattern(/^\d+\.\d{2}$/)
-      .optional(),
+      .when('paymentMethod', { is: 'CASH', then: Joi.optional(), otherwise: Joi.forbidden() }),
+    terminalTransactionReference: Joi.string()
+      .trim()
+      .when('paymentMethod', { is: 'CARD', then: Joi.required(), otherwise: Joi.forbidden() }),
+    transferReference: Joi.string()
+      .trim()
+      .when('paymentMethod', { is: 'TRANSFER', then: Joi.required(), otherwise: Joi.forbidden() }),
   }).required(),
 };
 const tracer = container.get<TracerService>(types.TracerService).tracer;
@@ -30,7 +37,7 @@ export const handler = middy(
   async (event: APIGatewayProxyEventV2, context: Context): Promise<APIGatewayProxyResultV2<CompletedSaleDto>> => {
     logger.addContext({ requestId: context.awsRequestId });
     const key = event.headers['idempotency-key'] ?? event.headers['Idempotency-Key'];
-    if (!key) throw new Error('Idempotency-Key is required.');
+    if (!key) throw new ValidationError('Idempotency-Key is required.');
     const principal = await Authorization.authenticate(event.headers);
     const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
     return container

@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { db } from '@src/app/core/infrastructure/database/postgres-drizzle.config';
+import { CheckoutTransactionContext } from '@src/app/modules/sales/infrastructure/database/CheckoutTransactionContext';
 import { checkoutQuotes, saleIdempotency } from '@src/app/core/infrastructure/database/schema';
 import {
   CheckoutQuoteRepository,
@@ -10,7 +11,10 @@ import {
 import { CheckoutQuoteSnapshot } from '@src/app/modules/sales/domain/CheckoutQuote';
 
 export class DrizzleCheckoutQuoteRepository implements CheckoutQuoteRepository {
-  constructor(private readonly database: typeof db = db) {}
+  constructor(private readonly override?: typeof db) {}
+  private get database(): typeof db {
+    return this.override ?? CheckoutTransactionContext.current();
+  }
   async save(quote: CheckoutQuoteSnapshot): Promise<void> {
     await this.database
       .insert(checkoutQuotes)
@@ -37,7 +41,10 @@ export class DrizzleCheckoutQuoteRepository implements CheckoutQuoteRepository {
 }
 
 export class DrizzleSaleIdempotencyRepository implements SaleIdempotencyRepository {
-  constructor(private readonly database: typeof db = db) {}
+  constructor(private readonly override?: typeof db) {}
+  private get database(): typeof db {
+    return this.override ?? CheckoutTransactionContext.current();
+  }
   async find(storeId: string, key: string): Promise<SaleIdempotencyRecord | undefined> {
     const [row] = await this.database
       .select()

@@ -60,10 +60,24 @@ import { InMemoryCheckoutQuoteRepository } from '@src/app/modules/sales/infrastr
 import { CheckoutPricingService } from '@src/app/modules/sales/infrastructure/services/CheckoutPricingService';
 import { CatalogCheckoutGateway } from '@src/app/modules/sales/infrastructure/services/CatalogCheckoutGateway';
 import { PromotionQuoteAdapter } from '@src/app/modules/sales/infrastructure/services/PromotionQuoteAdapter';
+import {
+  DrizzleCheckoutQuoteRepository,
+  DrizzleSaleIdempotencyRepository,
+} from '@src/app/modules/sales/infrastructure/repositories/drizzle/DrizzleCheckoutStateRepository';
+import { DrizzleSaleRepository } from '@src/app/modules/sales/infrastructure/repositories/drizzle/DrizzleSaleRepository';
+import { DrizzleCheckoutTransactionManager } from '@src/app/modules/sales/infrastructure/services/DrizzleCheckoutTransactionManager';
+import { DrizzleCatalogCheckoutGateway } from '@src/app/modules/sales/infrastructure/services/DrizzleCatalogCheckoutGateway';
+import { DrizzleCheckoutSaleRevalidator } from '@src/app/modules/sales/infrastructure/services/DrizzleCheckoutSaleRevalidator';
+import {
+  DrizzleInventoryMovementRepository,
+  DrizzleInventoryVariantStockGateway,
+} from '@src/app/modules/inventory/infrastructure/repositories/drizzle/DrizzleInventoryRepositories';
+import { CheckoutSaleRevalidator } from '@src/app/modules/sales/application/ports/CheckoutQuotePorts';
 import { InMemorySaleIdempotencyRepository } from '@src/app/modules/sales/infrastructure/repositories/in-memory/InMemorySaleIdempotencyRepository';
 import { CompleteQuoteSaleHandler } from '@src/app/modules/sales/application/commands/CompleteQuoteSaleHandler';
 
 const container = new Container();
+const useDrizzleCheckout = process.env.CHECKOUT_PERSISTENCE === 'drizzle';
 
 container.bind<ILogger>(types.Logger).to(PowertoolsLoggerAdapter).inSingletonScope();
 container.bind<MetricsService>(types.MetricsService).to(MetricsService).inSingletonScope();
@@ -84,19 +98,34 @@ container
     (context) => new InMemoryProductRepository(context.get<InMemoryCatalogStore>(types.SalesCatalogStore))
   )
   .inSingletonScope();
-container
-  .bind<InventoryVariantStockGateway>(types.SalesInventoryStockGateway)
-  .toDynamicValue(
-    (context) =>
-      new InMemoryInventoryVariantStockGateway(
-        context.get<ProductVariantRepository>(types.SalesProductVariantRepository)
-      )
-  )
-  .inSingletonScope();
-container
-  .bind<InMemoryInventoryMovementRepository>(types.SalesInventoryMovementRepository)
-  .to(InMemoryInventoryMovementRepository)
-  .inSingletonScope();
+if (useDrizzleCheckout) {
+  container
+    .bind<InventoryVariantStockGateway>(types.SalesInventoryStockGateway)
+    .to(DrizzleInventoryVariantStockGateway)
+    .inSingletonScope();
+  container
+    .bind<InventoryMovementRepository>(types.SalesInventoryMovementRepository)
+    .to(DrizzleInventoryMovementRepository)
+    .inSingletonScope();
+  container
+    .bind<CheckoutSaleRevalidator>(types.CheckoutSaleRevalidator)
+    .to(DrizzleCheckoutSaleRevalidator)
+    .inSingletonScope();
+} else {
+  container
+    .bind<InventoryVariantStockGateway>(types.SalesInventoryStockGateway)
+    .toDynamicValue(
+      (context) =>
+        new InMemoryInventoryVariantStockGateway(
+          context.get<ProductVariantRepository>(types.SalesProductVariantRepository)
+        )
+    )
+    .inSingletonScope();
+  container
+    .bind<InMemoryInventoryMovementRepository>(types.SalesInventoryMovementRepository)
+    .to(InMemoryInventoryMovementRepository)
+    .inSingletonScope();
+}
 container
   .bind<SalesCatalogGateway>(types.SalesCatalogGateway)
   .toDynamicValue(
@@ -126,23 +155,36 @@ container
       )
   )
   .inSingletonScope();
-container.bind<InMemorySaleRepository>(types.SaleRepository).to(InMemorySaleRepository).inSingletonScope();
-container
-  .bind<CheckoutQuoteRepository>(types.CheckoutQuoteRepository)
-  .to(InMemoryCheckoutQuoteRepository)
-  .inSingletonScope();
-container
-  .bind<SaleIdempotencyRepository>(types.SaleIdempotencyRepository)
-  .to(InMemorySaleIdempotencyRepository)
-  .inSingletonScope();
+if (useDrizzleCheckout) {
+  container.bind<SaleRepository>(types.SaleRepository).to(DrizzleSaleRepository).inSingletonScope();
+  container
+    .bind<CheckoutQuoteRepository>(types.CheckoutQuoteRepository)
+    .to(DrizzleCheckoutQuoteRepository)
+    .inSingletonScope();
+  container
+    .bind<SaleIdempotencyRepository>(types.SaleIdempotencyRepository)
+    .to(DrizzleSaleIdempotencyRepository)
+    .inSingletonScope();
+} else {
+  container.bind<InMemorySaleRepository>(types.SaleRepository).to(InMemorySaleRepository).inSingletonScope();
+  container
+    .bind<CheckoutQuoteRepository>(types.CheckoutQuoteRepository)
+    .to(InMemoryCheckoutQuoteRepository)
+    .inSingletonScope();
+  container
+    .bind<SaleIdempotencyRepository>(types.SaleIdempotencyRepository)
+    .to(InMemorySaleIdempotencyRepository)
+    .inSingletonScope();
+}
 container
   .bind<CheckoutCatalogGateway>(types.CheckoutCatalogGateway)
-  .toDynamicValue(
-    (context) =>
-      new CatalogCheckoutGateway(
-        context.get<ProductVariantRepository>(types.SalesProductVariantRepository),
-        context.get<ProductRepository>(types.SalesProductRepository)
-      )
+  .toDynamicValue((context) =>
+    useDrizzleCheckout
+      ? new DrizzleCatalogCheckoutGateway()
+      : new CatalogCheckoutGateway(
+          context.get<ProductVariantRepository>(types.SalesProductVariantRepository),
+          context.get<ProductRepository>(types.SalesProductRepository)
+        )
   )
   .inSingletonScope();
 container
@@ -185,19 +227,21 @@ container
         context.get<CheckoutTransactionManager>(types.CheckoutTransactionManager),
         context.get<SalesAuthorizationPolicy>(types.SalesAuthorizationPolicy),
         context.get<SalesClock>(types.SalesClock),
-        context.get<SalesIdGenerator>(types.SalesIdGenerator)
+        context.get<SalesIdGenerator>(types.SalesIdGenerator),
+        useDrizzleCheckout ? context.get<CheckoutSaleRevalidator>(types.CheckoutSaleRevalidator) : undefined
       )
   )
   .inSingletonScope();
 container
   .bind<CheckoutTransactionManager>(types.CheckoutTransactionManager)
-  .toDynamicValue(
-    (context) =>
-      new InMemoryCheckoutTransactionManager(
-        context.get<InMemoryCatalogStore>(types.SalesCatalogStore),
-        context.get<InMemoryInventoryMovementRepository>(types.SalesInventoryMovementRepository),
-        context.get<InMemorySaleRepository>(types.SaleRepository)
-      )
+  .toDynamicValue((context) =>
+    useDrizzleCheckout
+      ? new DrizzleCheckoutTransactionManager()
+      : new InMemoryCheckoutTransactionManager(
+          context.get<InMemoryCatalogStore>(types.SalesCatalogStore),
+          context.get<InMemoryInventoryMovementRepository>(types.SalesInventoryMovementRepository),
+          context.get<InMemorySaleRepository>(types.SaleRepository)
+        )
   )
   .inSingletonScope();
 container

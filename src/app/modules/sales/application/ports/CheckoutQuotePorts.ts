@@ -70,3 +70,9 @@ export interface SaleIdempotencyRepository {
   find(storeId: string, key: string): Promise<SaleIdempotencyRecord | undefined>;
   save(record: SaleIdempotencyRecord): Promise<void>;
 }
+export interface CheckoutSaleRevalidator {
+  lockAndValidate(
+    storeId: string,
+    items: readonly { variantId: string; quantity: number; unitPrice: number }[]
+  ): Promise<void>;
+}

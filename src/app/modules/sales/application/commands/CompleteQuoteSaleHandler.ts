@@ -1,6 +1,7 @@
 import {
   CheckoutPricingService,
   CheckoutQuoteRepository,
+  CheckoutSaleRevalidator,
   SaleIdempotencyRepository,
 } from '@src/app/modules/sales/application/ports/CheckoutQuotePorts';
 import {
@@ -39,7 +40,8 @@ export class CompleteQuoteSaleHandler {
     private readonly transaction: CheckoutTransactionManager,
     private readonly auth: SalesAuthorizationPolicy,
     private readonly clock: SalesClock,
-    private readonly ids: SalesIdGenerator
+    private readonly ids: SalesIdGenerator,
+    private readonly revalidator?: CheckoutSaleRevalidator
   ) {}
   async execute(principal: AuthenticatedPrincipal, command: CompleteQuoteSaleCommand): Promise<CompletedSaleDto> {
     authorizeSalesComplete(this.auth, principal);
@@ -53,7 +55,8 @@ export class CompleteQuoteSaleHandler {
       if (prior.fingerprint !== fingerprint) throw new IdempotencyConflictError();
       if (prior.status === 'COMPLETED' && prior.saleId) {
         const sale = await this.sales.findById(principal.storeId, prior.saleId);
-        if (sale) return toCompletedSaleDto(sale, undefined, command.tenderedAmount);
+        const quote = await this.quotes.findById(principal.storeId, command.quoteId);
+        if (sale) return toCompletedSaleDto(sale, quote, command.tenderedAmount);
       }
     }
     return this.transaction.execute(async () => {
@@ -61,6 +64,7 @@ export class CompleteQuoteSaleHandler {
       if (!quote || quote.subjectId !== principal.subjectId) throw new NotFoundError('Checkout quote was not found.');
       const now = this.clock.now();
       if (quote.expiresAt <= now) throw new StalePricingError();
+      await this.revalidator?.lockAndValidate(principal.storeId, quote.items);
       const current = await this.pricing.price(
         principal,
         {
