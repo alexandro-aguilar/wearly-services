@@ -2,13 +2,28 @@
 
 This stack restores the documented Lambda/API Gateway deployment workflow and adds Phase 7 Cognito authentication. It is the explicit migration exception recorded in ADR 0009; CDK remains the target for infrastructure outside this scope.
 
+## State backends and workspaces
+
+Terraform state is isolated through two environment roots and matching Terraform workspaces:
+
+- `local` stores state on the developer's filesystem at `terraform/workspaces/local/terraform.tfstate.d/local/terraform.tfstate`.
+- `dev` stores state in the already-provisioned S3 bucket at `s3://$TF_STATE_BUCKET/workspaces/dev/wearly-services.tfstate`. S3 server-side encryption and Terraform's S3 lockfile are enabled.
+
+The dev bucket name is deliberately not committed. Authenticate to AWS through the standard AWS credential chain, then export the bucket and (when different from `us-east-1`) its region:
+
+```bash
+export TF_STATE_BUCKET="your-existing-terraform-state-bucket"
+export TF_STATE_REGION="us-east-1"
+```
+
+The workspace command initializes the appropriate backend and selects or creates its matching workspace. Do not run `terraform workspace select` directly from `terraform/`; use the package scripts below.
+
 ## Deploy locally
 
 Build the Lambda bundles before Terraform packages them:
 
 ```bash
 yarn build
-yarn tf:init:local
 yarn tf:apply:local
 ```
 
@@ -27,8 +42,8 @@ All `/api/v1` routes require a Cognito access or ID token. Create users with the
 
 ```bash
 yarn tf:fmt
-yarn tf:validate
 yarn tf:plan:local
+TF_STATE_BUCKET=your-existing-terraform-state-bucket yarn tf:plan:dev
 ```
 
 ## LocalStack deployment verification
