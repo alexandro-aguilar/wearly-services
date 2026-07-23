@@ -9,12 +9,9 @@ if ! curl --fail --silent --show-error "$LOCALSTACK_HEALTH_URL" >/dev/null; then
 fi
 
 yarn build
-terraform -chdir=terraform init -input=false -reconfigure
-terraform -chdir=terraform apply -input=false -auto-approve \
-  -var-file=environments/local/aws-common.tfvars \
-  -var-file=environments/local/environment.tfvars
+./scripts/terraformWorkspace.sh local apply -input=false -auto-approve
 
-api_url="$(terraform -chdir=terraform output -raw api_invoke_url)"
+api_url="$(./scripts/terraformWorkspace.sh local output -raw api_invoke_url)"
 status_code="$(curl --silent --output /dev/null --write-out '%{http_code}' "${api_url}/api/v1/products")"
 
 if [[ "$status_code" != "401" ]]; then

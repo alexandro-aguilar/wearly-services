@@ -59,55 +59,65 @@ export class CompleteQuoteSaleHandler {
         if (sale) return toCompletedSaleDto(sale, quote, command.tenderedAmount);
       }
     }
-    return this.transaction.execute(async () => {
-      const quote = await this.quotes.findById(principal.storeId, command.quoteId);
-      if (!quote || quote.subjectId !== principal.subjectId) throw new NotFoundError('Checkout quote was not found.');
-      const now = this.clock.now();
-      if (quote.expiresAt <= now) throw new StalePricingError();
-      await this.revalidator?.lockAndValidate(principal.storeId, quote.items);
-      const current = await this.pricing.price(
-        principal,
-        {
-          items: quote.items.map((item) => ({ variantId: item.variantId, quantity: item.quantity })),
-          manualDiscount: quote.manualDiscount
-            ? { amount: quote.manualDiscount.amount.toFixed(2), reason: quote.manualDiscount.reason }
-            : undefined,
-        },
-        now
-      );
-      if (current.total !== quote.total || current.discount !== quote.discount) throw new StalePricingError();
-      await this.idempotency.save({
-        storeId: principal.storeId,
-        key: command.idempotencyKey,
-        fingerprint,
-        status: 'PENDING',
-      });
-      const sale = Sale.complete({
-        id: this.ids.nextId('sale'),
-        storeId: principal.storeId,
-        paymentMethod: command.paymentMethod,
-        createdAt: now,
-        tax: quote.tax,
-        items: quote.items.map((item) => ({
-          productVariantId: item.variantId,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          discount: item.discount,
-        })),
-      });
-      for (const item of quote.items)
-        await this.inventory.reduceStock(principal.storeId, item.variantId, item.quantity, now);
-      const snapshot = sale.toSnapshot();
-      await this.sales.save(snapshot);
-      await this.idempotency.save({
-        storeId: principal.storeId,
-        key: command.idempotencyKey,
-        fingerprint,
-        status: 'COMPLETED',
-        saleId: snapshot.id,
-      });
-      return toCompletedSaleDto(snapshot, quote, command.tenderedAmount);
+    await this.idempotency.save({
+      storeId: principal.storeId,
+      key: command.idempotencyKey,
+      fingerprint,
+      status: 'PENDING',
     });
+    try {
+      return await this.transaction.execute(async () => {
+        const quote = await this.quotes.findById(principal.storeId, command.quoteId);
+        if (!quote || quote.subjectId !== principal.subjectId) throw new NotFoundError('Checkout quote was not found.');
+        const now = this.clock.now();
+        if (quote.expiresAt <= now) throw new StalePricingError();
+        await this.revalidator?.lockAndValidate(principal.storeId, quote.items);
+        const current = await this.pricing.price(
+          principal,
+          {
+            items: quote.items.map((item) => ({ variantId: item.variantId, quantity: item.quantity })),
+            manualDiscount: quote.manualDiscount
+              ? { amount: quote.manualDiscount.amount.toFixed(2), reason: quote.manualDiscount.reason }
+              : undefined,
+          },
+          now
+        );
+        if (current.total !== quote.total || current.discount !== quote.discount) throw new StalePricingError();
+        const sale = Sale.complete({
+          id: this.ids.nextId('sale'),
+          storeId: principal.storeId,
+          paymentMethod: command.paymentMethod,
+          createdAt: now,
+          tax: quote.tax,
+          items: quote.items.map((item) => ({
+            productVariantId: item.variantId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            discount: item.discount,
+          })),
+        });
+        for (const item of quote.items)
+          await this.inventory.reduceStock(principal.storeId, item.variantId, item.quantity, now);
+        const snapshot = sale.toSnapshot();
+        await this.sales.save(snapshot);
+        await this.idempotency.save({
+          storeId: principal.storeId,
+          key: command.idempotencyKey,
+          fingerprint,
+          status: 'COMPLETED',
+          saleId: snapshot.id,
+        });
+        return toCompletedSaleDto(snapshot, quote, command.tenderedAmount);
+      });
+    } catch (error) {
+      await this.idempotency.save({
+        storeId: principal.storeId,
+        key: command.idempotencyKey,
+        fingerprint,
+        status: 'FAILED',
+      });
+      throw error;
+    }
   }
   async status(principal: AuthenticatedPrincipal, key: string): Promise<IdempotencyStatusDto> {
     authorizeSalesRead(this.auth, principal);
