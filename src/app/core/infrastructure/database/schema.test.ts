@@ -50,5 +50,6 @@ describe('Wearly Drizzle schema', () => {
     expect(productVariants.productId.notNull).toBe(true);
     expect(productVariants.stock.notNull).toBe(true);
     expect(productVariants.minimumStock.notNull).toBe(true);
+    expect(sales.paymentReference.notNull).toBe(false);
   });
 });

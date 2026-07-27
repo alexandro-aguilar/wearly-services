@@ -1,4 +1,5 @@
 import { and, desc, eq } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
 import { db } from '@src/app/core/infrastructure/database/postgres-drizzle.config';
 import { CheckoutTransactionContext } from '@src/app/modules/sales/infrastructure/database/CheckoutTransactionContext';
 import { saleItems, sales } from '@src/app/core/infrastructure/database/schema';
@@ -20,12 +21,13 @@ export class DrizzleSaleRepository implements SaleRepository {
       tax: sale.tax.toFixed(2),
       total: sale.total.toFixed(2),
       paymentMethod: sale.paymentMethod,
+      paymentReference: sale.paymentReference,
       status: sale.status,
       createdAt: sale.createdAt,
     });
     await this.database.insert(saleItems).values(
       sale.items.map((item) => ({
-        id: `${sale.id}-${item.productVariantId}`,
+        id: randomUUID(),
         saleId: sale.id,
         productVariantId: item.productVariantId,
         quantity: item.quantity,
@@ -52,6 +54,7 @@ export class DrizzleSaleRepository implements SaleRepository {
       tax: Number(sale.tax),
       total: Number(sale.total),
       paymentMethod: sale.paymentMethod as SaleSnapshot['paymentMethod'],
+      paymentReference: sale.paymentReference ?? undefined,
       status: sale.status as SaleSnapshot['status'],
       createdAt: sale.createdAt,
       items: items.map((item) => ({

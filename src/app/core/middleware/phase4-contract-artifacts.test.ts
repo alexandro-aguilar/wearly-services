@@ -43,5 +43,29 @@ describe('Phase 4 HTTP contract artifacts', () => {
     expect(openApi.paths['/api/v1/sales'].post.parameters).toContainEqual({
       $ref: '#/components/parameters/IdempotencyKey',
     });
+    expect(openApi.components.parameters.SelectedStore).toMatchObject({
+      name: 'X-Wearly-Store-Id',
+      in: 'header',
+    });
+  });
+
+  it('publishes each Phase 4 endpoint with a success response and an error envelope', () => {
+    const openApi = JSON.parse(readFileSync(openApiPath, 'utf8'));
+    const requiredRoutes = [
+      ['/api/v1/products', 'get'],
+      ['/api/v1/variants', 'get'],
+      ['/api/v1/checkout/quote', 'post'],
+      ['/api/v1/sales', 'post'],
+      ['/api/v1/sales/idempotency/{key}', 'get'],
+      ['/api/v1/sales/{id}', 'get'],
+      ['/api/v1/session', 'get'],
+      ['/api/v1/session/store', 'post'],
+    ] as const;
+
+    for (const [path, method] of requiredRoutes) {
+      const operation = openApi.paths[path][method];
+      expect(operation.responses['200']).toBeDefined();
+      expect(Object.values(operation.responses)).toContainEqual({ $ref: '#/components/responses/Error' });
+    }
   });
 });

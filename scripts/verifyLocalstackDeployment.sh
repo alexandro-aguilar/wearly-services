@@ -12,7 +12,13 @@ yarn build
 ./scripts/terraformWorkspace.sh local apply -input=false -auto-approve
 
 api_url="$(./scripts/terraformWorkspace.sh local output -raw api_invoke_url)"
-status_code="$(curl --silent --output /dev/null --write-out '%{http_code}' "${api_url}/api/v1/products")"
+api_host="${api_url#https://}"
+api_host="${api_host%/}"
+status_code="$(
+  curl --silent --output /dev/null --write-out '%{http_code}' \
+    --header "Host: ${api_host}" \
+    "${LOCALSTACK_ENDPOINT:-http://localhost:4566}/api/v1/products"
+)"
 
 if [[ "$status_code" != "401" ]]; then
   echo "Expected unauthenticated GET /api/v1/products to return 401, received $status_code." >&2

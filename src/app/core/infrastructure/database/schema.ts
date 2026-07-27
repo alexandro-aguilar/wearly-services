@@ -134,6 +134,7 @@ export const sales = pgTable('sales', {
   tax: numeric('tax', { precision: 12, scale: 2 }).notNull(),
   total: numeric('total', { precision: 12, scale: 2 }).notNull(),
   paymentMethod: text('payment_method').notNull(),
+  paymentReference: text('payment_reference'),
   status: text('status').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });

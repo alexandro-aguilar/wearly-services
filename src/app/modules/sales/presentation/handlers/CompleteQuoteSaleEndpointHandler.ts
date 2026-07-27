@@ -38,6 +38,7 @@ export const handler = middy(
     logger.addContext({ requestId: context.awsRequestId });
     const key = event.headers['idempotency-key'] ?? event.headers['Idempotency-Key'];
     if (!key) throw new ValidationError('Idempotency-Key is required.');
+    if (Joi.string().uuid().validate(key).error) throw new ValidationError('Idempotency-Key must be a UUID.');
     const principal = await Authorization.authenticate(event.headers);
     const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
     return container

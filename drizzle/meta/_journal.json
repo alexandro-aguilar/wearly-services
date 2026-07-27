@@ -15,6 +15,13 @@
       "when": 1783890000000,
       "tag": "0001_checkout_quotes_idempotency",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784772260003,
+      "tag": "0002_sale_payment_reference",
+      "breakpoints": true
     }
   ]
 }

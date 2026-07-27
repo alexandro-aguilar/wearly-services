@@ -12,7 +12,7 @@ case "$workspace" in
     readonly workspace_name="local"
     readonly common_vars="../../environments/local/aws-common.tfvars"
     readonly environment_vars="../../environments/local/environment.tfvars"
-    terraform -chdir="$root" init -input=false -reconfigure
+    terraform -chdir="$root" init -input=false -migrate-state -force-copy
     ;;
   dev)
     readonly root="terraform/workspaces/dev"

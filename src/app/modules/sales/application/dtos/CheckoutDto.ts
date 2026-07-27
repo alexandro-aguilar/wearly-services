@@ -38,6 +38,7 @@ export interface CompletedSaleDto {
   readonly items: readonly CompletedSaleItemDto[];
   readonly appliedPromotions: readonly AppliedPromotionDto[];
   readonly paymentMethod: CheckoutPaymentMethod;
+  readonly paymentReference?: string;
   readonly subtotal: string;
   readonly discount: string;
   readonly tax: string;

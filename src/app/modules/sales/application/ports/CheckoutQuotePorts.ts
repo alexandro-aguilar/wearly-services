@@ -68,6 +68,8 @@ export interface SaleIdempotencyRecord {
 }
 export interface SaleIdempotencyRepository {
   find(storeId: string, key: string): Promise<SaleIdempotencyRecord | undefined>;
+  findBySaleId?(storeId: string, saleId: string): Promise<SaleIdempotencyRecord | undefined>;
+  claim(record: SaleIdempotencyRecord): Promise<{ claimed: boolean; record: SaleIdempotencyRecord }>;
   save(record: SaleIdempotencyRecord): Promise<void>;
 }
 export interface CheckoutSaleRevalidator {

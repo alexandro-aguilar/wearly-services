@@ -19,6 +19,7 @@ import { Sale } from '@src/app/modules/sales/domain/Sale';
 import { CompletedSaleDto, IdempotencyStatusDto } from '@src/app/modules/sales/application/dtos/CheckoutDto';
 import { AuthenticatedPrincipal } from '@src/shared/application/auth/AuthenticatedPrincipal';
 import {
+  ConflictError,
   IdempotencyConflictError,
   NotFoundError,
   StalePricingError,
@@ -28,6 +29,8 @@ export interface CompleteQuoteSaleCommand {
   readonly quoteId: string;
   readonly paymentMethod: 'CASH' | 'CARD' | 'TRANSFER';
   readonly tenderedAmount?: string;
+  readonly terminalTransactionReference?: string;
+  readonly transferReference?: string;
   readonly idempotencyKey: string;
 }
 export class CompleteQuoteSaleHandler {
@@ -45,26 +48,29 @@ export class CompleteQuoteSaleHandler {
   ) {}
   async execute(principal: AuthenticatedPrincipal, command: CompleteQuoteSaleCommand): Promise<CompletedSaleDto> {
     authorizeSalesComplete(this.auth, principal);
+    const paymentReference = paymentReferenceFor(command);
     const fingerprint = JSON.stringify({
       quoteId: command.quoteId,
       paymentMethod: command.paymentMethod,
       tenderedAmount: command.tenderedAmount,
+      paymentReference,
     });
-    const prior = await this.idempotency.find(principal.storeId, command.idempotencyKey);
-    if (prior) {
+    const claim = await this.idempotency.claim({
+      storeId: principal.storeId,
+      key: command.idempotencyKey,
+      fingerprint,
+      status: 'PENDING',
+    });
+    if (!claim.claimed) {
+      const prior = claim.record;
       if (prior.fingerprint !== fingerprint) throw new IdempotencyConflictError();
       if (prior.status === 'COMPLETED' && prior.saleId) {
         const sale = await this.sales.findById(principal.storeId, prior.saleId);
         const quote = await this.quotes.findById(principal.storeId, command.quoteId);
         if (sale) return toCompletedSaleDto(sale, quote, command.tenderedAmount);
       }
+      if (prior.status === 'PENDING') throw new ConflictError('This idempotency key is currently being processed.');
     }
-    await this.idempotency.save({
-      storeId: principal.storeId,
-      key: command.idempotencyKey,
-      fingerprint,
-      status: 'PENDING',
-    });
     try {
       return await this.transaction.execute(async () => {
         const quote = await this.quotes.findById(principal.storeId, command.quoteId);
@@ -87,6 +93,7 @@ export class CompleteQuoteSaleHandler {
           id: this.ids.nextId('sale'),
           storeId: principal.storeId,
           paymentMethod: command.paymentMethod,
+          paymentReference,
           createdAt: now,
           tax: quote.tax,
           items: quote.items.map((item) => ({
@@ -124,7 +131,18 @@ export class CompleteQuoteSaleHandler {
     const record = await this.idempotency.find(principal.storeId, key);
     if (!record) throw new NotFoundError('Idempotency key was not found.');
     const sale = record.saleId ? await this.sales.findById(principal.storeId, record.saleId) : undefined;
-    return { key, status: record.status, sale: sale ? toCompletedSaleDto(sale) : undefined };
+    const quoteId = quoteIdFromFingerprint(record.fingerprint);
+    const quote = quoteId ? await this.quotes.findById(principal.storeId, quoteId) : undefined;
+    return { key, status: record.status, sale: sale ? toCompletedSaleDto(sale, quote) : undefined };
+  }
+  async getSale(principal: AuthenticatedPrincipal, saleId: string): Promise<CompletedSaleDto> {
+    authorizeSalesRead(this.auth, principal);
+    const sale = await this.sales.findById(principal.storeId, saleId);
+    if (!sale) throw new NotFoundError('Sale was not found.');
+    const record = await this.idempotency.findBySaleId?.(principal.storeId, saleId);
+    const quoteId = record ? quoteIdFromFingerprint(record.fingerprint) : undefined;
+    const quote = quoteId ? await this.quotes.findById(principal.storeId, quoteId) : undefined;
+    return toCompletedSaleDto(sale, quote);
   }
 }
 export function toCompletedSaleDto(
@@ -151,10 +169,29 @@ export function toCompletedSaleDto(
     })),
     appliedPromotions: quote?.appliedPromotions?.map((p: any) => ({ ...p, discount: p.discount.toFixed(2) })) ?? [],
     paymentMethod: sale.paymentMethod,
+    paymentReference: sale.paymentReference,
     subtotal: sale.subtotal.toFixed(2),
     discount: sale.discount.toFixed(2),
     tax: sale.tax.toFixed(2),
     total: sale.total.toFixed(2),
     changeAmount: tenderedAmount === undefined ? undefined : (tenderedAmount - total).toFixed(2),
   };
+}
+
+function paymentReferenceFor(command: CompleteQuoteSaleCommand): string | undefined {
+  if (command.paymentMethod === 'CASH') return undefined;
+  const value = command.paymentMethod === 'CARD' ? command.terminalTransactionReference : command.transferReference;
+  if (!value?.trim()) throw new ValidationError(`${command.paymentMethod} payment requires a payment reference.`);
+  return value.trim();
+}
+
+function quoteIdFromFingerprint(fingerprint: string): string | undefined {
+  try {
+    const parsed: unknown = JSON.parse(fingerprint);
+    if (typeof parsed !== 'object' || parsed === null) return undefined;
+    const quoteId = (parsed as { quoteId?: unknown }).quoteId;
+    return typeof quoteId === 'string' && quoteId ? quoteId : undefined;
+  } catch {
+    return undefined;
+  }
 }

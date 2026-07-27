@@ -6,14 +6,16 @@ Deliver the server-authoritative POS and checkout contract defined in `BACKEND_P
 
 ## Status summary
 
-**Implementation is substantially complete.** The required Phase 4 routes, DTOs, persistence migration, fixtures, and baseline application behavior are present. The phase is **not yet ready to be marked complete** because database integration, Lambda/API contract coverage, idempotency-concurrency behavior, payment-reference persistence, session-store selection, and deployment verification remain outstanding.
+**Implementation is substantially complete.** The required Phase 4 routes, DTOs, persistence migrations, fixtures, application behavior, and LocalStack deployment are present. The phase is **not yet ready to be marked complete** because the PostgreSQL and Lambda/API coverage still needs to cover every required failure workflow.
 
 Verification completed on 2026-07-22:
 
-- `yarn test` passed: 13 files and 68 tests.
+- `yarn test` passed: 16 files and 78 tests; one PostgreSQL integration suite is skipped unless `RUN_POSTGRES_INTEGRATION=1` is set.
 - `yarn typecheck` passed.
 - `yarn lint` passed, with an ESLint warning that `.eslintignore` is deprecated.
 - `yarn build` passed.
+- `RUN_POSTGRES_INTEGRATION=1 ... yarn vitest run DrizzleCheckoutStateRepository.integration.test.ts` passed: quote persistence/date hydration, transaction rollback, concurrent idempotency claim, and failed-key reclamation.
+- LocalStack Terraform deployment completed; the deployed API gateway returned `401` for an unauthenticated product request when reached through the LocalStack gateway. The generated API hostname is not locally resolvable, so the repository verification script needs a LocalStack gateway-aware URL.
 
 ## Implemented capabilities
 
@@ -40,37 +42,38 @@ Verification completed on 2026-07-22:
 - Quote persistence stores the quote snapshot, owner, store, and expiry.
 - Unit tests cover trusted totals and promotion attribution, invalid quantities, unavailable stock, and unauthorized manual discounts.
 
-### Quote-backed sale completion — implemented with verification gaps
+### Quote-backed sale completion — implemented with integration verification pending
 
 - `checkout_quotes` and `sale_idempotency` tables and the `(store_id, idempotency_key)` unique index are included in the Drizzle migration.
 - Drizzle repositories exist for checkout quotes and idempotency state, alongside sale and inventory adapters.
 - The checkout transaction context wraps database work in a Drizzle transaction.
 - Quote completion revalidates and locks product/variant inventory facts, rejects stale quotes and insufficient stock, creates sales and inventory movements, and updates stock in the transaction.
 - `POST /api/v1/sales`, `GET /api/v1/sales/idempotency/{key}`, and `GET /api/v1/sales/{id}` are routed and documented.
-- The sale endpoint requires `Idempotency-Key`, replays a completed sale for the same request fingerprint, and returns `IDEMPOTENCY_CONFLICT` when the key is reused with different input.
+- The sale endpoint requires `Idempotency-Key`, atomically claims a new or failed key, rejects a pending duplicate request, replays a completed sale for the same request fingerprint, and returns `IDEMPOTENCY_CONFLICT` when the key is reused with different input.
 - Cash completion returns `changeAmount` when `tenderedAmount` is supplied.
+- Focused application tests cover completion, replay without a second stock reduction, and pending-key rejection.
+- Idempotency lookup reloads the stored quote snapshot so a completed response retains item merchandising and promotion attribution.
 
-### Payments and sessions — partially implemented
+### Payments and sessions — implemented with operational verification pending
 
 - `CASH`, `CARD`, and `TRANSFER` payload validation exists at the sale endpoint; card and transfer requests require their respective references.
-- `GET /api/v1/session` returns the authenticated user, role, selected store, currency, time zone, and available-store shape.
-- `POST /api/v1/session/store` validates the requested store against the principal's current store context.
+- Terminal and transfer references are carried through quote-backed completion, persisted on the sale, and documented in OpenAPI.
+- `GET /api/v1/session` returns the authenticated user, role, selected store, currency, time zone, and active stores from the `user_store_roles` mapping.
+- `POST /api/v1/session/store` validates selection against active, database-backed store roles that also match the trusted JWT roles.
+- Application tests cover available-store filtering and selection authorization.
+- Subsequent authenticated requests may send `X-Wearly-Store-Id`; the API resolves it only to an active database assignment whose role is also present in the trusted JWT, then scopes authorization to that role.
 
 ## Remaining work
 
 ### Required verification
 
-1. Add PostgreSQL integration tests for quote expiry, stale pricing, idempotency replay/conflict, insufficient stock, and full transaction rollback.
-2. Add focused tests for quote-backed sale completion, including the idempotency status endpoint.
-3. Add Lambda/API contract tests for every Phase 4 route and required success/failure envelope.
-4. Run the LocalStack Terraform deployment and verification workflow; deployment has not been verified in this status update.
+1. Expand PostgreSQL integration tests to cover quote expiry, stale pricing, idempotency replay/conflict, insufficient stock, and full quote-backed-sale rollback. Concurrent claims and transaction rollback are verified.
+2. Add executable Lambda/API contract tests for every Phase 4 route and required success/failure envelope, including the idempotency status endpoint. The OpenAPI/fixture contract test currently verifies all documented routes and error-envelope coverage.
+3. Update `verifyLocalstackDeployment.sh` to use the LocalStack gateway URL or host-header routing so it works without a local wildcard-DNS configuration.
 
 ### Required behavior decisions or implementation
 
-1. Make concurrent same-key idempotency handling explicit and test it. The current unique record prevents duplicate keys, but concurrent completion behavior has not been proven serialized.
-2. Persist card terminal and transfer references, and expose them through the approved sale DTO if required by the payment contract. The current endpoint validates these values but the completion command and sale persistence model do not retain them.
-3. Implement genuine multi-store session selection. The current session endpoints derive a single store from the JWT principal and cannot select from independently validated active store roles.
-4. Confirm the idempotency lookup response preserves all completed-sale presentation details required by the frontend, including item merchandising and promotion attribution.
+1. Confirm PostgreSQL-level behavior for simultaneous same-key requests during full sale completion, beyond the repository-level claim verification.
 
 ## Completion criteria
 
@@ -78,6 +81,6 @@ Phase 4 can be marked complete when all of the following are true:
 
 - Every endpoint in `BACKEND_PHASE_4_REQUIREMENTS.md` is deployed and verified under `/api/v1`.
 - PostgreSQL integration and Lambda/API contract tests cover the required Phase 4 behavior and pass.
-- Idempotent sale completion is proven safe for concurrent retries.
-- Payment references and multi-store session behavior match the approved frontend contract.
+- Idempotent sale completion is proven safe for concurrent retries against PostgreSQL.
+- Selected-store propagation across subsequent authenticated requests matches the approved Cognito/session strategy.
 - The frontend can use the documented DTOs, OpenAPI schemas, and fixtures without calculating commercial values client-side.

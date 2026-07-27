@@ -303,6 +303,7 @@ Some current scripts still reference older paths such as `app/` while source fil
 - Do not put Wearly business logic in legacy-named modules.
 - When current code differs from a spec or accepted ADR, follow the spec or ADR for new Wearly features and mention any migration impact.
 - Before finishing, run the most relevant tests, lint, or type checks that are available and report anything that could not be run.
+- Agents may run `colima start` without requesting additional confirmation when Docker is required for the project's PostgreSQL, LocalStack, or Terraform verification workflows.
 
 ## Development workflow
 

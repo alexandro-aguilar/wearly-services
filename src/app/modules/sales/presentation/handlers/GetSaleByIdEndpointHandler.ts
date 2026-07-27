@@ -10,10 +10,9 @@ import { responseHandler } from '@src/app/core/middleware/responseHandler';
 import ILogger from '@src/app/core/utils/ILogger';
 import MetricsService from '@src/app/core/utils/MetricsService';
 import TracerService from '@src/app/core/utils/TracerService';
-import { GetSaleByIdHandler } from '@src/app/modules/sales/application/queries/GetSaleByIdHandler';
 import container from '@src/app/modules/sales/config/container';
 import types from '@src/app/modules/sales/config/types';
-import { toCompletedSaleDto } from '@src/app/modules/sales/application/commands/CompleteQuoteSaleHandler';
+import { CompleteQuoteSaleHandler } from '@src/app/modules/sales/application/commands/CompleteQuoteSaleHandler';
 import { CompletedSaleDto } from '@src/app/modules/sales/application/dtos/CheckoutDto';
 
 const getSaleByIdEndpointHandlerSchema: ValidatorSchemas = {
@@ -28,10 +27,9 @@ export const handler = middy(
   async (event: APIGatewayProxyEventV2, context: Context): Promise<APIGatewayProxyResultV2<CompletedSaleDto>> => {
     logger.addContext({ requestId: context.awsRequestId });
     const principal = await Authorization.authenticate(event.headers);
-    const sale = await container
-      .get<GetSaleByIdHandler>(types.GetSaleByIdHandler)
-      .execute(principal, event.pathParameters?.id || '');
-    return toCompletedSaleDto(sale);
+    return container
+      .get<CompleteQuoteSaleHandler>(types.CompleteQuoteSaleHandler)
+      .getSale(principal, event.pathParameters?.id || '');
   }
 )
   .use(requestValidator(getSaleByIdEndpointHandlerSchema))

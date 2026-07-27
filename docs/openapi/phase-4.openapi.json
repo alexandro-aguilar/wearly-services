@@ -3,7 +3,7 @@
   "info": {
     "title": "Wearly Services Phase 4 API",
     "version": "1.0.0",
-    "description": "Contract foundation for server-authoritative product discovery and checkout. Monetary values are decimal strings."
+    "description": "Contract foundation for server-authoritative product discovery and checkout. Monetary values are decimal strings. After POST /api/v1/session/store, send the selected store ID in the X-Wearly-Store-Id header on subsequent authenticated requests; the API validates the active database-backed role against trusted JWT roles."
   },
   "paths": {
     "/api/v1/products": {
@@ -152,6 +152,12 @@
         "in": "header",
         "required": true,
         "schema": { "type": "string", "format": "uuid" }
+      },
+      "SelectedStore": {
+        "name": "X-Wearly-Store-Id",
+        "in": "header",
+        "description": "Optional selected store for subsequent authenticated requests. It must be an active user_store_roles assignment whose role is also present in the JWT.",
+        "schema": { "type": "string" }
       },
       "IdempotencyPathKey": {
         "name": "key",
@@ -325,6 +331,14 @@
         "properties": {
           "quoteId": { "type": "string" },
           "paymentMethod": { "type": "string", "enum": ["CASH", "CARD", "TRANSFER"] },
+          "terminalTransactionReference": {
+            "type": "string",
+            "description": "Required terminal transaction reference for CARD payments."
+          },
+          "transferReference": {
+            "type": "string",
+            "description": "Required transfer reference for TRANSFER payments."
+          },
           "tenderedAmount": { "$ref": "#/components/schemas/Money" }
         }
       },
@@ -349,6 +363,10 @@
           "items": { "type": "array", "items": { "$ref": "#/components/schemas/QuoteItem" } },
           "appliedPromotions": { "type": "array", "items": { "$ref": "#/components/schemas/AppliedPromotion" } },
           "paymentMethod": { "type": "string", "enum": ["CASH", "CARD", "TRANSFER"] },
+          "paymentReference": {
+            "type": "string",
+            "description": "Persisted terminal or transfer reference when supplied by the selected payment method."
+          },
           "subtotal": { "$ref": "#/components/schemas/Money" },
           "discount": { "$ref": "#/components/schemas/Money" },
           "tax": { "$ref": "#/components/schemas/Money" },

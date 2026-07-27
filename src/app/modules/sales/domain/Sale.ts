@@ -21,6 +21,7 @@ export interface SaleSnapshot {
   readonly tax: number;
   readonly total: number;
   readonly paymentMethod: PaymentMethod;
+  readonly paymentReference?: string;
   readonly status: SaleStatus;
   readonly createdAt: Date;
   readonly items: readonly SaleItemSnapshot[];
@@ -38,6 +39,7 @@ export interface CompleteSaleInput {
   readonly storeId: string;
   readonly customerId?: string;
   readonly paymentMethod: PaymentMethod;
+  readonly paymentReference?: string;
   readonly items: readonly PricedSaleItem[];
   readonly tax?: number;
   readonly createdAt: Date;
@@ -92,6 +94,7 @@ export class Sale {
       tax,
       total: subtotal - discount + tax,
       paymentMethod: input.paymentMethod,
+      paymentReference: normalizeOptional(input.paymentReference),
       status: 'COMPLETED',
       createdAt: input.createdAt,
       items,

@@ -36,7 +36,12 @@ export class DrizzleCheckoutQuoteRepository implements CheckoutQuoteRepository {
       .from(checkoutQuotes)
       .where(and(eq(checkoutQuotes.storeId, storeId), eq(checkoutQuotes.id, quoteId)))
       .limit(1);
-    return row?.snapshot as CheckoutQuoteSnapshot | undefined;
+    if (!row) return undefined;
+    const snapshot = row.snapshot as CheckoutQuoteSnapshot & { expiresAt: Date | string };
+    return {
+      ...snapshot,
+      expiresAt: snapshot.expiresAt instanceof Date ? snapshot.expiresAt : new Date(snapshot.expiresAt),
+    };
   }
 }
 
@@ -60,6 +65,52 @@ export class DrizzleSaleIdempotencyRepository implements SaleIdempotencyReposito
           saleId: row.saleId ?? undefined,
         }
       : undefined;
+  }
+  async findBySaleId(storeId: string, saleId: string): Promise<SaleIdempotencyRecord | undefined> {
+    const [row] = await this.database
+      .select()
+      .from(saleIdempotency)
+      .where(and(eq(saleIdempotency.storeId, storeId), eq(saleIdempotency.saleId, saleId)))
+      .limit(1);
+    return row
+      ? {
+          storeId: row.storeId,
+          key: row.idempotencyKey,
+          fingerprint: row.requestFingerprint,
+          status: row.status as SaleIdempotencyRecord['status'],
+          saleId: row.saleId ?? undefined,
+        }
+      : undefined;
+  }
+  async claim(record: SaleIdempotencyRecord): Promise<{ claimed: boolean; record: SaleIdempotencyRecord }> {
+    const [created] = await this.database
+      .insert(saleIdempotency)
+      .values({
+        id: randomUUID(),
+        storeId: record.storeId,
+        idempotencyKey: record.key,
+        requestFingerprint: record.fingerprint,
+        status: record.status,
+        saleId: record.saleId,
+      })
+      .onConflictDoNothing()
+      .returning({ idempotencyKey: saleIdempotency.idempotencyKey });
+    if (created) return { claimed: true, record };
+    const [reclaimed] = await this.database
+      .update(saleIdempotency)
+      .set({ status: 'PENDING', saleId: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(saleIdempotency.storeId, record.storeId),
+          eq(saleIdempotency.idempotencyKey, record.key),
+          eq(saleIdempotency.status, 'FAILED')
+        )
+      )
+      .returning({ idempotencyKey: saleIdempotency.idempotencyKey });
+    if (reclaimed) return { claimed: true, record };
+    const existing = await this.find(record.storeId, record.key);
+    if (!existing) throw new Error('Unable to claim idempotency key.');
+    return { claimed: false, record: existing };
   }
   async save(record: SaleIdempotencyRecord): Promise<void> {
     await this.database

@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema';
-import Environment from '@src/core/utils/Environment';
+import Environment from '@src/app/core/utils/Environment';
 
 const globalForDrizzle = globalThis as unknown as {
   drizzleDb?: ReturnType<typeof drizzle>;
