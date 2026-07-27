@@ -8,6 +8,8 @@ import { GetBestSellersReportHandler } from '@src/app/modules/reporting/applicat
 import { GetDailySalesReportHandler } from '@src/app/modules/reporting/application/queries/GetDailySalesReportHandler';
 import { GetLowStockReportHandler } from '@src/app/modules/reporting/application/queries/GetLowStockReportHandler';
 import { RoleBasedReportingAuthorizationPolicy } from '@src/app/modules/reporting/application/ReportingAuthorizationPolicy';
+import { InventoryReportingReader } from '@src/app/modules/reporting/infrastructure/services/InventoryReportingReader';
+import { SalesReportingReader } from '@src/app/modules/reporting/infrastructure/services/SalesReportingReader';
 import { InventoryVariantStockSnapshot } from '@src/app/modules/inventory/domain/InventoryVariantStock';
 import { SaleSnapshot } from '@src/app/modules/sales/domain/Sale';
 import { AuthenticatedPrincipal } from '@src/shared/application/auth/AuthenticatedPrincipal';
@@ -93,6 +95,30 @@ describe('reporting query handlers', () => {
     const reporting = buildHarness();
     await expect(reporting.lowStock.execute(manager('store-a'))).resolves.toEqual({ items: [] });
     await expect(reporting.lowStock.execute(cashier('store-a'))).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it('projects source sales and inventory without mutating either bounded context', async () => {
+    const sales = [sale({ id: 'sale-1' })];
+    const inventory = [stock({ id: 'variant-1', stock: 1, minimumStock: 2 })];
+    const salesReader = new SalesReportingReader({
+      save: async () => {
+        throw new Error('Reporting must not mutate sales.');
+      },
+      findById: async () => undefined,
+      list: async () => sales,
+    });
+    const inventoryReader = new InventoryReportingReader({
+      findById: async () => undefined,
+      listLowStock: async () => inventory,
+      saveStock: async () => {
+        throw new Error('Reporting must not mutate inventory.');
+      },
+    });
+
+    await expect(salesReader.list('store-a')).resolves.toEqual([expect.objectContaining({ id: 'sale-1' })]);
+    await expect(inventoryReader.listLowStock('store-a')).resolves.toEqual([
+      expect.objectContaining({ productVariantId: 'variant-1' }),
+    ]);
   });
 });
 

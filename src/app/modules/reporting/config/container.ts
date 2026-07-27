@@ -8,6 +8,7 @@ import PowertoolsLoggerAdapter from '@src/app/core/utils/Logger';
 import TracerService from '@src/app/core/utils/TracerService';
 import { InventoryVariantStockGateway } from '@src/app/modules/inventory/application/ports/InventoryRepositories';
 import { InMemoryInventoryVariantStockGateway } from '@src/app/modules/inventory/infrastructure/repositories/in-memory/InMemoryInventoryVariantStockGateway';
+import { DrizzleInventoryVariantStockGateway } from '@src/app/modules/inventory/infrastructure/repositories/drizzle/DrizzleInventoryRepositories';
 import {
   ReportingInventoryReader,
   ReportingSalesReader,
@@ -21,8 +22,10 @@ import types from '@src/app/modules/reporting/config/types';
 import { InventoryReportingReader } from '@src/app/modules/reporting/infrastructure/services/InventoryReportingReader';
 import { SalesReportingReader } from '@src/app/modules/reporting/infrastructure/services/SalesReportingReader';
 import { InMemorySaleRepository } from '@src/app/modules/sales/infrastructure/repositories/in-memory/InMemorySaleRepository';
+import { DrizzleSaleRepository } from '@src/app/modules/sales/infrastructure/repositories/drizzle/DrizzleSaleRepository';
 
 const container = new Container();
+const useDrizzleReporting = process.env.CHECKOUT_PERSISTENCE === 'drizzle';
 container.bind<ILogger>(types.Logger).to(PowertoolsLoggerAdapter).inSingletonScope();
 container.bind<MetricsService>(types.MetricsService).to(MetricsService).inSingletonScope();
 container.bind<TracerService>(types.TracerService).to(TracerService).inSingletonScope();
@@ -32,11 +35,14 @@ container
   .inSingletonScope();
 container
   .bind<ReportingSalesReader>(types.ReportingSalesReader)
-  .toDynamicValue(() => new SalesReportingReader(new InMemorySaleRepository()))
+  .toDynamicValue(
+    () => new SalesReportingReader(useDrizzleReporting ? new DrizzleSaleRepository() : new InMemorySaleRepository())
+  )
   .inSingletonScope();
 container
   .bind<ReportingInventoryReader>(types.ReportingInventoryReader)
   .toDynamicValue(() => {
+    if (useDrizzleReporting) return new InventoryReportingReader(new DrizzleInventoryVariantStockGateway());
     const variants: ProductVariantRepository = new InMemoryProductVariantRepository(sharedInMemoryCatalogStore);
     const inventory: InventoryVariantStockGateway = new InMemoryInventoryVariantStockGateway(variants);
     return new InventoryReportingReader(inventory);
