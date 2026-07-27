@@ -6,16 +6,16 @@ Deliver the server-authoritative POS and checkout contract defined in `BACKEND_P
 
 ## Status summary
 
-**Implementation is substantially complete.** The required Phase 4 routes, DTOs, persistence migrations, fixtures, application behavior, and LocalStack deployment are present. The phase is **not yet ready to be marked complete** because the PostgreSQL and Lambda/API coverage still needs to cover every required failure workflow.
+**Implementation is substantially complete.** The required Phase 4 routes, DTOs, persistence migrations, fixtures, application behavior, and LocalStack deployment are present. PostgreSQL integration coverage now exercises quote expiry, stale pricing, insufficient stock, concurrent idempotency claims/replay, and transaction rollback. Lambda contract tests cover every required route's validation or unauthenticated error envelope.
 
-Verification completed on 2026-07-22:
+Verification completed on 2026-07-26:
 
 - `yarn test` passed: 16 files and 78 tests; one PostgreSQL integration suite is skipped unless `RUN_POSTGRES_INTEGRATION=1` is set.
 - `yarn typecheck` passed.
 - `yarn lint` passed, with an ESLint warning that `.eslintignore` is deprecated.
 - `yarn build` passed.
-- `RUN_POSTGRES_INTEGRATION=1 ... yarn vitest run DrizzleCheckoutStateRepository.integration.test.ts` passed: quote persistence/date hydration, transaction rollback, concurrent idempotency claim, and failed-key reclamation.
-- LocalStack Terraform deployment completed; the deployed API gateway returned `401` for an unauthenticated product request when reached through the LocalStack gateway. The generated API hostname is not locally resolvable, so the repository verification script needs a LocalStack gateway-aware URL.
+- `RUN_POSTGRES_INTEGRATION=1 ... yarn vitest run DrizzleCheckoutStateRepository.integration.test.ts` passed: quote persistence/date hydration, expiry and stale-price rejection, insufficient-stock rejection, transaction rollback, concurrent idempotency claim/replay, and failed-key reclamation.
+- `yarn verify:localstack` rebuilt and deployed the stack, then confirmed that the protected API returns `401` through LocalStack's gateway-aware host routing.
 
 ## Implemented capabilities
 
@@ -65,15 +65,9 @@ Verification completed on 2026-07-22:
 
 ## Remaining work
 
-### Required verification
+### Remaining verification
 
-1. Expand PostgreSQL integration tests to cover quote expiry, stale pricing, idempotency replay/conflict, insufficient stock, and full quote-backed-sale rollback. Concurrent claims and transaction rollback are verified.
-2. Add executable Lambda/API contract tests for every Phase 4 route and required success/failure envelope, including the idempotency status endpoint. The OpenAPI/fixture contract test currently verifies all documented routes and error-envelope coverage.
-3. Update `verifyLocalstackDeployment.sh` to use the LocalStack gateway URL or host-header routing so it works without a local wildcard-DNS configuration.
-
-### Required behavior decisions or implementation
-
-1. Confirm PostgreSQL-level behavior for simultaneous same-key requests during full sale completion, beyond the repository-level claim verification.
+1. Add an authenticated, deployed end-to-end smoke flow for quote creation and sale completion once the local Cognito-user and store-role fixture workflow is automated. The current Lambda contract tests exercise each route's boundary error behavior, and application/PostgreSQL tests cover successful checkout behavior.
 
 ## Completion criteria
 

@@ -19,13 +19,19 @@ import { ListActivePromotionsHandler } from '@src/app/modules/promotions/applica
 import { ListPromotionsHandler } from '@src/app/modules/promotions/application/queries/ListPromotionsHandler';
 import types from '@src/app/modules/promotions/config/types';
 import { InMemoryPromotionRepository } from '@src/app/modules/promotions/infrastructure/repositories/in-memory/InMemoryPromotionRepository';
+import { DrizzlePromotionRepository } from '@src/app/modules/promotions/infrastructure/repositories/drizzle/DrizzlePromotionRepository';
 import { SystemClock } from '@src/shared/application/Clock';
 
 const container = new Container();
+const useDrizzlePromotions = process.env.CHECKOUT_PERSISTENCE === 'drizzle';
 container.bind<ILogger>(types.Logger).to(PowertoolsLoggerAdapter).inSingletonScope();
 container.bind<MetricsService>(types.MetricsService).to(MetricsService).inSingletonScope();
 container.bind<TracerService>(types.TracerService).to(TracerService).inSingletonScope();
-container.bind<PromotionRepository>(types.PromotionRepository).to(InMemoryPromotionRepository).inSingletonScope();
+if (useDrizzlePromotions) {
+  container.bind<PromotionRepository>(types.PromotionRepository).to(DrizzlePromotionRepository).inSingletonScope();
+} else {
+  container.bind<PromotionRepository>(types.PromotionRepository).to(InMemoryPromotionRepository).inSingletonScope();
+}
 container
   .bind<PromotionAuthorizationPolicy>(types.PromotionAuthorizationPolicy)
   .to(RoleBasedPromotionAuthorizationPolicy)

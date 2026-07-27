@@ -4,6 +4,9 @@ import { eq } from 'drizzle-orm';
 import {
   checkoutQuotes,
   inventoryMovements,
+  promotionActions,
+  promotionConditions,
+  promotions,
   productVariants,
   products,
   saleIdempotency,
@@ -21,6 +24,7 @@ import {
   DrizzleSaleIdempotencyRepository,
 } from '@src/app/modules/sales/infrastructure/repositories/drizzle/DrizzleCheckoutStateRepository';
 import { DrizzleSaleRepository } from '@src/app/modules/sales/infrastructure/repositories/drizzle/DrizzleSaleRepository';
+import { DrizzlePromotionRepository } from '@src/app/modules/promotions/infrastructure/repositories/drizzle/DrizzlePromotionRepository';
 import { DrizzleCheckoutSaleRevalidator } from '@src/app/modules/sales/infrastructure/services/DrizzleCheckoutSaleRevalidator';
 import { DrizzleCheckoutTransactionManager } from '@src/app/modules/sales/infrastructure/services/DrizzleCheckoutTransactionManager';
 import { DrizzleCatalogCheckoutGateway } from '@src/app/modules/sales/infrastructure/services/DrizzleCatalogCheckoutGateway';
@@ -39,6 +43,15 @@ const createdStoreIds: string[] = [];
 describeIntegration('Drizzle checkout state repositories', () => {
   afterEach(async () => {
     for (const storeId of createdStoreIds.splice(0)) {
+      const storePromotions = await db
+        .select({ id: promotions.id })
+        .from(promotions)
+        .where(eq(promotions.storeId, storeId));
+      for (const promotion of storePromotions) {
+        await db.delete(promotionActions).where(eq(promotionActions.promotionId, promotion.id));
+        await db.delete(promotionConditions).where(eq(promotionConditions.promotionId, promotion.id));
+      }
+      await db.delete(promotions).where(eq(promotions.storeId, storeId));
       await db.delete(saleIdempotency).where(eq(saleIdempotency.storeId, storeId));
       await db.delete(inventoryMovements).where(eq(inventoryMovements.storeId, storeId));
       const storeSales = await db.select({ id: sales.id }).from(sales).where(eq(sales.storeId, storeId));
@@ -67,6 +80,33 @@ describeIntegration('Drizzle checkout state repositories', () => {
       })
     ).rejects.toThrow('force rollback');
     await expect(quotes.findById(storeId, rolledBackQuote.id)).resolves.toBeUndefined();
+  });
+
+  it('round-trips configurable promotions with their conditions and actions, scoped by store and activity date', async () => {
+    const storeId = await createStore();
+    const otherStoreId = await createStore();
+    const repository = new DrizzlePromotionRepository();
+    const promotion = {
+      id: randomUUID(),
+      storeId,
+      name: 'Weekend jackets',
+      description: '20% off jackets',
+      type: 'PERCENTAGE_DISCOUNT' as const,
+      conditions: [{ field: 'category' as const, operator: 'EQUALS' as const, value: 'jackets' }],
+      actions: [{ type: 'PERCENTAGE_DISCOUNT' as const, value: 20 }],
+      startsAt: new Date('2026-07-22T10:00:00.000Z'),
+      endsAt: new Date('2026-07-22T14:00:00.000Z'),
+      priority: 10,
+      active: true,
+    };
+
+    await repository.save(promotion);
+    await repository.save({ ...promotion, id: randomUUID(), storeId: otherStoreId, name: 'Other store' });
+
+    await expect(repository.findById(storeId, promotion.id)).resolves.toEqual(promotion);
+    await expect(repository.list(storeId)).resolves.toEqual([promotion]);
+    await expect(repository.listActive(storeId, new Date('2026-07-22T12:00:00.000Z'))).resolves.toEqual([promotion]);
+    await expect(repository.listActive(storeId, new Date('2026-07-22T15:00:00.000Z'))).resolves.toEqual([]);
   });
 
   it('atomically allows only one concurrent claim for an idempotency key and reclaims a failed key', async () => {

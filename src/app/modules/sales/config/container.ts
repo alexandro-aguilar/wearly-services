@@ -45,6 +45,8 @@ import { InventorySalesGateway } from '@src/app/modules/sales/infrastructure/ser
 import { SystemClock } from '@src/shared/application/Clock';
 import { EvaluatePromotionsHandler } from '@src/app/modules/promotions/application/queries/EvaluatePromotionsHandler';
 import { InMemoryPromotionRepository } from '@src/app/modules/promotions/infrastructure/repositories/in-memory/InMemoryPromotionRepository';
+import { DrizzlePromotionRepository } from '@src/app/modules/promotions/infrastructure/repositories/drizzle/DrizzlePromotionRepository';
+import { PromotionRepository } from '@src/app/modules/promotions/application/ports/PromotionRepositories';
 import { PromotionCheckoutAdapter } from '@src/app/modules/promotions/infrastructure/services/PromotionCheckoutAdapter';
 import { InMemoryCustomerRepository } from '@src/app/modules/customers/infrastructure/repositories/in-memory/InMemoryCustomerRepository';
 import { CustomerCheckoutAdapter } from '@src/app/modules/customers/infrastructure/services/CustomerCheckoutAdapter';
@@ -138,7 +140,16 @@ container
   .inSingletonScope();
 container
   .bind<SalesPromotionGateway>(types.SalesPromotionGateway)
-  .toDynamicValue(() => new PromotionCheckoutAdapter(new EvaluatePromotionsHandler(new InMemoryPromotionRepository())))
+  .toDynamicValue(
+    () =>
+      new PromotionCheckoutAdapter(
+        new EvaluatePromotionsHandler(
+          (useDrizzleCheckout
+            ? new DrizzlePromotionRepository()
+            : new InMemoryPromotionRepository()) as PromotionRepository
+        )
+      )
+  )
   .inSingletonScope();
 container
   .bind<SalesCustomerGateway>(types.SalesCustomerGateway)
@@ -189,7 +200,16 @@ container
   .inSingletonScope();
 container
   .bind<CheckoutPromotionGateway>(types.CheckoutPromotionGateway)
-  .toDynamicValue(() => new PromotionQuoteAdapter(new EvaluatePromotionsHandler(new InMemoryPromotionRepository())))
+  .toDynamicValue(
+    () =>
+      new PromotionQuoteAdapter(
+        new EvaluatePromotionsHandler(
+          (useDrizzleCheckout
+            ? new DrizzlePromotionRepository()
+            : new InMemoryPromotionRepository()) as PromotionRepository
+        )
+      )
+  )
   .inSingletonScope();
 container
   .bind<CheckoutPricingServicePort>(types.CheckoutPricingService)
