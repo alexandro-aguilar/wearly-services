@@ -230,7 +230,8 @@ container
         context.get<CheckoutQuoteRepository>(types.CheckoutQuoteRepository),
         context.get<CheckoutPricingServicePort>(types.CheckoutPricingService),
         context.get<SalesClock>(types.SalesClock),
-        { nextId: () => context.get<SalesIdGenerator>(types.SalesIdGenerator).nextId('sale') }
+        { nextId: () => context.get<SalesIdGenerator>(types.SalesIdGenerator).nextId('sale') },
+        context.get<SalesCustomerGateway>(types.SalesCustomerGateway)
       )
   )
   .inSingletonScope();
@@ -248,7 +249,8 @@ container
         context.get<SalesAuthorizationPolicy>(types.SalesAuthorizationPolicy),
         context.get<SalesClock>(types.SalesClock),
         context.get<SalesIdGenerator>(types.SalesIdGenerator),
-        useDrizzleCheckout ? context.get<CheckoutSaleRevalidator>(types.CheckoutSaleRevalidator) : undefined
+        useDrizzleCheckout ? context.get<CheckoutSaleRevalidator>(types.CheckoutSaleRevalidator) : undefined,
+        context.get<SalesCustomerGateway>(types.SalesCustomerGateway)
       )
   )
   .inSingletonScope();

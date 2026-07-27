@@ -5,26 +5,38 @@ import {
   CheckoutQuoteRepository,
   CheckoutPricingService,
 } from '@src/app/modules/sales/application/ports/CheckoutQuotePorts';
+import { SalesCustomerGateway } from '@src/app/modules/sales/application/ports/SalesRepositories';
 import { CheckoutQuote } from '@src/app/modules/sales/domain/CheckoutQuote';
 import { AuthenticatedPrincipal } from '@src/shared/application/auth/AuthenticatedPrincipal';
+import { NotFoundError } from '@src/shared/domain/exceptions/PlatformError';
 export interface CreateCheckoutQuoteCommand {
+  readonly customerId?: string;
   readonly items: readonly { variantId: string; quantity: number }[];
   readonly manualDiscount?: { amount: string; reason: string };
 }
+
+const noCustomerValidation: SalesCustomerGateway = {
+  isActiveCustomer: async () => true,
+};
 export class CreateCheckoutQuoteHandler {
   constructor(
     private readonly quotes: CheckoutQuoteRepository,
     private readonly pricing: CheckoutPricingService,
     private readonly clock: CheckoutQuoteClock,
-    private readonly ids: CheckoutQuoteIdGenerator
+    private readonly ids: CheckoutQuoteIdGenerator,
+    private readonly customers: SalesCustomerGateway = noCustomerValidation
   ) {}
   async execute(principal: AuthenticatedPrincipal, command: CreateCheckoutQuoteCommand): Promise<CheckoutQuoteDto> {
+    if (command.customerId && !(await this.customers.isActiveCustomer(principal.storeId, command.customerId))) {
+      throw new NotFoundError('Customer was not found.');
+    }
     const now = this.clock.now();
     const priced = await this.pricing.price(principal, command, now);
     const quote = CheckoutQuote.create({
       id: this.ids.nextId(),
       storeId: principal.storeId,
       subjectId: principal.subjectId,
+      customerId: command.customerId,
       expiresAt: new Date(now.getTime() + 300000),
       ...priced,
     });
@@ -32,6 +44,7 @@ export class CreateCheckoutQuoteHandler {
     await this.quotes.save(snapshot);
     return {
       quoteId: snapshot.id,
+      customerId: snapshot.customerId,
       expiresAt: snapshot.expiresAt.toISOString(),
       currency: snapshot.currency,
       items: snapshot.items.map((item) => ({

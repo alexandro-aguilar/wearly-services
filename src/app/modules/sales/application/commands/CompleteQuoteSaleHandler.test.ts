@@ -88,9 +88,34 @@ describe('CompleteQuoteSaleHandler', () => {
       appliedPromotions: [{ id: 'promotion-1', name: 'Shirt promotion', discount: '2.00' }],
     });
   });
+
+  it('preserves the quoted customer association on the completed sale', async () => {
+    const harness = createHarness({ customerId: 'customer-1' });
+
+    await harness.handler.execute(principal, {
+      quoteId: 'quote-1',
+      paymentMethod: 'CASH',
+      idempotencyKey: 'key-1',
+    });
+
+    expect(harness.sales[0].customerId).toBe('customer-1');
+  });
+
+  it('rejects a customer that is no longer active before completing the sale', async () => {
+    const harness = createHarness({ customerId: 'customer-1' }, false);
+
+    await expect(
+      harness.handler.execute(principal, {
+        quoteId: 'quote-1',
+        paymentMethod: 'CASH',
+        idempotencyKey: 'key-1',
+      })
+    ).rejects.toMatchObject({ message: 'Customer was not found.' });
+    expect(harness.sales).toHaveLength(0);
+  });
 });
 
-function createHarness() {
+function createHarness(overrides: Partial<CheckoutQuoteSnapshot> = {}, customerIsActive = true) {
   let stock = 5;
   const sales: SaleSnapshot[] = [];
   const quote: CheckoutQuoteSnapshot = {
@@ -115,6 +140,7 @@ function createHarness() {
     discount: 2,
     tax: 0,
     total: 18,
+    ...overrides,
   };
   const records = new Map<
     string,
@@ -164,7 +190,9 @@ function createHarness() {
     { execute: async <T>(work: () => Promise<T>) => work() },
     new RoleBasedSalesAuthorizationPolicy(),
     { now: () => new Date('2026-07-22T12:00:00.000Z') },
-    { nextId: () => 'sale-1' }
+    { nextId: () => 'sale-1' },
+    undefined,
+    { isActiveCustomer: async () => customerIsActive }
   );
   return {
     handler,

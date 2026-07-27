@@ -68,6 +68,28 @@ describe('CreateCheckoutQuoteHandler', () => {
       })
     ).rejects.toBeInstanceOf(ForbiddenError);
   });
+
+  it('associates an active customer with a quote and rejects a customer outside the store', async () => {
+    const quotes = new InMemoryCheckoutQuoteRepository();
+    const handler = new CreateCheckoutQuoteHandler(
+      quotes,
+      new CheckoutPricingService(catalog, inventory, promotions),
+      clock,
+      ids,
+      { isActiveCustomer: async (storeId, customerId) => storeId === 'store-a' && customerId === 'customer-1' }
+    );
+
+    await expect(
+      handler.execute(cashier(), { customerId: 'customer-1', items: [{ variantId: 'variant-1', quantity: 1 }] })
+    ).resolves.toMatchObject({ customerId: 'customer-1' });
+    await expect(quotes.findById('store-a', 'quote-1')).resolves.toMatchObject({ customerId: 'customer-1' });
+    await expect(
+      handler.execute(cashier(), {
+        customerId: 'customer-from-store-b',
+        items: [{ variantId: 'variant-1', quantity: 1 }],
+      })
+    ).rejects.toBeInstanceOf(NotFoundError);
+  });
 });
 
 const catalog = {

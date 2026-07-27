@@ -16,6 +16,7 @@ import container from '@src/app/modules/sales/config/container';
 import types from '@src/app/modules/sales/config/types';
 const schema: ValidatorSchemas = {
   body: Joi.object({
+    customerId: Joi.string().optional(),
     items: Joi.array()
       .items(Joi.object({ variantId: Joi.string().required(), quantity: Joi.number().integer().min(1).required() }))
       .min(1)

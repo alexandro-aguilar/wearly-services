@@ -4,6 +4,7 @@ export interface CheckoutQuoteSnapshot {
   readonly id: string;
   readonly storeId: string;
   readonly subjectId: string;
+  readonly customerId?: string;
   readonly expiresAt: Date;
   readonly currency: string;
   readonly items: readonly CheckoutQuoteItem[];

@@ -19,6 +19,7 @@ export interface CheckoutQuoteItemDto {
 
 export interface CheckoutQuoteDto {
   readonly quoteId: string;
+  readonly customerId?: string;
   readonly expiresAt: string;
   readonly currency: string;
   readonly items: readonly CheckoutQuoteItemDto[];

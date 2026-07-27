@@ -7,6 +7,7 @@ import {
 import {
   CheckoutTransactionManager,
   SaleRepository,
+  SalesCustomerGateway,
   SalesInventoryGateway,
 } from '@src/app/modules/sales/application/ports/SalesRepositories';
 import {
@@ -33,6 +34,11 @@ export interface CompleteQuoteSaleCommand {
   readonly transferReference?: string;
   readonly idempotencyKey: string;
 }
+
+const noCustomerValidation: SalesCustomerGateway = {
+  isActiveCustomer: async () => true,
+};
+
 export class CompleteQuoteSaleHandler {
   constructor(
     private readonly quotes: CheckoutQuoteRepository,
@@ -44,7 +50,8 @@ export class CompleteQuoteSaleHandler {
     private readonly auth: SalesAuthorizationPolicy,
     private readonly clock: SalesClock,
     private readonly ids: SalesIdGenerator,
-    private readonly revalidator?: CheckoutSaleRevalidator
+    private readonly revalidator?: CheckoutSaleRevalidator,
+    private readonly customers: SalesCustomerGateway = noCustomerValidation
   ) {}
   async execute(principal: AuthenticatedPrincipal, command: CompleteQuoteSaleCommand): Promise<CompletedSaleDto> {
     authorizeSalesComplete(this.auth, principal);
@@ -75,6 +82,9 @@ export class CompleteQuoteSaleHandler {
       return await this.transaction.execute(async () => {
         const quote = await this.quotes.findById(principal.storeId, command.quoteId);
         if (!quote || quote.subjectId !== principal.subjectId) throw new NotFoundError('Checkout quote was not found.');
+        if (quote.customerId && !(await this.customers.isActiveCustomer(principal.storeId, quote.customerId))) {
+          throw new NotFoundError('Customer was not found.');
+        }
         const now = this.clock.now();
         if (quote.expiresAt <= now) throw new StalePricingError();
         await this.revalidator?.lockAndValidate(principal.storeId, quote.items);
@@ -92,6 +102,7 @@ export class CompleteQuoteSaleHandler {
         const sale = Sale.complete({
           id: this.ids.nextId('sale'),
           storeId: principal.storeId,
+          customerId: quote.customerId,
           paymentMethod: command.paymentMethod,
           paymentReference,
           createdAt: now,
