@@ -29,14 +29,14 @@ export interface CognitoJwk {
   readonly [claim: string]: string | undefined;
   readonly kty: 'RSA';
   readonly kid: string;
-  readonly use?: string;
-  readonly alg?: string;
+  readonly use: 'sig';
+  readonly alg: 'RS256';
   readonly n: string;
   readonly e: string;
 }
 
 export interface CognitoJwksClient {
-  getSigningKeys(issuer: string): Promise<readonly CognitoJwk[]>;
+  getSigningKeys(issuer: string): Promise<readonly unknown[]>;
 }
 
 class HttpCognitoJwksClient implements CognitoJwksClient {
@@ -125,7 +125,9 @@ export class CognitoJwtVerifier {
     if (cached) return cached;
 
     const keys = await this.jwksClient.getSigningKeys(this.config.issuer);
-    for (const key of keys) this.keyCache.set(key.kid, key);
+    for (const key of keys) {
+      if (isCognitoJwk(key)) this.keyCache.set(key.kid, key);
+    }
 
     const key = this.keyCache.get(kid);
     if (!key) throw new UnauthenticatedError('Invalid authentication token.');
@@ -182,5 +184,12 @@ function isJwksResponse(value: unknown): value is { keys: unknown[] } {
 function isCognitoJwk(value: unknown): value is CognitoJwk {
   if (typeof value !== 'object' || value === null) return false;
   const key = value as Partial<CognitoJwk>;
-  return key.kty === 'RSA' && typeof key.kid === 'string' && typeof key.n === 'string' && typeof key.e === 'string';
+  return (
+    key.kty === 'RSA' &&
+    key.use === 'sig' &&
+    key.alg === 'RS256' &&
+    typeof key.kid === 'string' &&
+    typeof key.n === 'string' &&
+    typeof key.e === 'string'
+  );
 }

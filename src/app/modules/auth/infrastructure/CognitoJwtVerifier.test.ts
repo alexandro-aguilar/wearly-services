@@ -11,12 +11,12 @@ const issuer = 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_example';
 const clientId = 'wearly-client';
 const keyPair = generateKeyPairSync('rsa', { modulusLength: 2048 });
 const publicJwk = keyPair.publicKey.export({ format: 'jwk' }) as { n?: string; e?: string };
-const jwk: CognitoJwk = { kty: 'RSA', kid: 'key-1', n: publicJwk.n!, e: publicJwk.e! };
+const jwk: CognitoJwk = { kty: 'RSA', kid: 'key-1', use: 'sig', alg: 'RS256', n: publicJwk.n!, e: publicJwk.e! };
 
 class FakeJwksClient implements CognitoJwksClient {
-  constructor(private readonly keys: readonly CognitoJwk[]) {}
+  constructor(private readonly keys: readonly unknown[]) {}
 
-  async getSigningKeys(): Promise<readonly CognitoJwk[]> {
+  async getSigningKeys(): Promise<readonly unknown[]> {
     return this.keys;
   }
 }
@@ -57,6 +57,15 @@ describe('CognitoJwtVerifier', () => {
     await expect(verifier.verifyBearerToken(`Bearer ${token({ exp: 1 })}`)).rejects.toBeInstanceOf(
       UnauthenticatedError
     );
+  });
+
+  it('rejects signing keys that are not designated for RS256 signatures', async () => {
+    const verifier = new CognitoJwtVerifier(
+      { issuer, clientId },
+      new FakeJwksClient([{ ...jwk, use: 'enc', alg: 'RSA-OAEP' }])
+    );
+
+    await expect(verifier.verifyBearerToken(`Bearer ${token()}`)).rejects.toBeInstanceOf(UnauthenticatedError);
   });
 
   it('accepts a Cognito access token when its client ID matches', async () => {

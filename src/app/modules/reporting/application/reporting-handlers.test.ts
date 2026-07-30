@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ReportingAuthorizationPolicy } from '@src/app/modules/reporting/application/ports/ReportingServices';
 import {
   ReportingInventoryReader,
+  ReportingCatalogReader,
   ReportingSalesReader,
 } from '@src/app/modules/reporting/application/ports/ReportingRepositories';
 import { GetBestSellersReportHandler } from '@src/app/modules/reporting/application/queries/GetBestSellersReportHandler';
@@ -29,27 +30,36 @@ describe('reporting query handlers', () => {
     });
 
     await expect(
-      reporting.daily.execute(manager('store-a'), { date: '2026-01-01', timezoneOffsetMinutes: -360 })
+      reporting.daily.execute(manager('store-a'), { date: '2026-01-01', timeZone: 'America/Mexico_City' })
     ).resolves.toEqual({
-      date: '2026-01-01',
-      timezoneOffsetMinutes: -360,
-      saleCount: 2,
-      itemQuantity: 2,
-      subtotal: 370,
-      discount: 20,
-      tax: 25,
-      total: 375,
+      meta: {
+        storeId: 'store-a',
+        currency: 'USD',
+        timeZone: 'America/Mexico_City',
+        period: { from: '2026-01-01', to: '2026-01-01' },
+      },
+      totals: { saleCount: 2, itemQuantity: 2, subtotal: 370, discount: 20, tax: 25, total: 375 },
+      series: [{ date: '2026-01-01', saleCount: 2, itemQuantity: 2, subtotal: 370, discount: 20, tax: 25, total: 375 }],
     });
   });
 
   it('rejects invalid reporting dates and timezone offsets', async () => {
     const reporting = buildHarness();
     await expect(
-      reporting.daily.execute(manager('store-a'), { date: '01/01/2026', timezoneOffsetMinutes: 0 })
+      reporting.daily.execute(manager('store-a'), { date: '01/01/2026', timeZone: 'UTC' })
     ).rejects.toBeInstanceOf(ValidationError);
     await expect(
-      reporting.daily.execute(manager('store-a'), { date: '2026-01-01', timezoneOffsetMinutes: 9999 })
+      reporting.daily.execute(manager('store-a'), { date: '2026-01-01', timeZone: 'not-a-zone' })
     ).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it('zero-fills a multi-day sales overview and observes IANA daylight-saving boundaries', async () => {
+    const reporting = buildHarness({ sales: [sale({ id: 'first', createdAt: '2026-03-08T05:00:00.000Z' })] });
+    await expect(
+      reporting.daily.execute(manager('store-a'), { date: '2026-03-08', timeZone: 'America/New_York' })
+    ).resolves.toMatchObject({
+      series: [{ date: '2026-03-08', saleCount: 1 }],
+    });
   });
 
   it('aggregates best sellers by variant from completed store sales with deterministic ranking', async () => {
@@ -64,10 +74,18 @@ describe('reporting query handlers', () => {
       ],
     });
 
-    await expect(reporting.bestSellers.execute(manager('store-a'), { limit: 2 })).resolves.toEqual({
+    await expect(
+      reporting.bestSellers.execute(manager('store-a'), {
+        limit: 2,
+        from: '2026-01-01',
+        to: '2026-01-01',
+        timeZone: 'UTC',
+      })
+    ).resolves.toMatchObject({
+      meta: { storeId: 'store-a', currency: 'USD', timeZone: 'UTC', period: { from: '2026-01-01', to: '2026-01-01' } },
       items: [
-        { productVariantId: 'variant-a', quantitySold: 3, grossSales: 90, netSales: 90 },
-        { productVariantId: 'variant-b', quantitySold: 2, grossSales: 40, netSales: 40 },
+        { rank: 1, productVariantId: 'variant-a', quantitySold: 3, grossSales: 90, discount: 0, netSales: 90 },
+        { rank: 2, productVariantId: 'variant-b', quantitySold: 2, grossSales: 40, discount: 0, netSales: 40 },
       ],
     });
   });
@@ -83,7 +101,7 @@ describe('reporting query handlers', () => {
       ],
     });
 
-    await expect(reporting.lowStock.execute(manager('store-a'))).resolves.toEqual({
+    await expect(reporting.lowStock.execute(manager('store-a'))).resolves.toMatchObject({
       items: [
         expect.objectContaining({ productVariantId: 'zero', stock: 0 }),
         expect.objectContaining({ productVariantId: 'threshold', stock: 2 }),
@@ -93,7 +111,7 @@ describe('reporting query handlers', () => {
 
   it('allows managers and admins to report but rejects cashiers', async () => {
     const reporting = buildHarness();
-    await expect(reporting.lowStock.execute(manager('store-a'))).resolves.toEqual({ items: [] });
+    await expect(reporting.lowStock.execute(manager('store-a'))).resolves.toMatchObject({ items: [] });
     await expect(reporting.lowStock.execute(cashier('store-a'))).rejects.toBeInstanceOf(ForbiddenError);
   });
 
@@ -136,14 +154,21 @@ class FakeReportingInventoryReader implements ReportingInventoryReader {
   }
 }
 
+class FakeReportingCatalogReader implements ReportingCatalogReader {
+  async list() {
+    return [];
+  }
+}
+
 function buildHarness(input: { sales?: SaleSnapshot[]; inventory?: InventoryVariantStockSnapshot[] } = {}) {
   const authorization: ReportingAuthorizationPolicy = new RoleBasedReportingAuthorizationPolicy();
   const sales = new FakeReportingSalesReader(input.sales ?? []);
   const inventory = new FakeReportingInventoryReader(input.inventory ?? []);
+  const catalog = new FakeReportingCatalogReader();
   return {
     daily: new GetDailySalesReportHandler(sales, authorization),
-    bestSellers: new GetBestSellersReportHandler(sales, authorization),
-    lowStock: new GetLowStockReportHandler(inventory, authorization),
+    bestSellers: new GetBestSellersReportHandler(sales, authorization, catalog),
+    lowStock: new GetLowStockReportHandler(inventory, authorization, catalog),
   };
 }
 

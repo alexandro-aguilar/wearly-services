@@ -30,6 +30,7 @@ locals {
     update_promotion         = { handler = "UpdatePromotionEndpointHandler" }
     best_sellers_report      = { handler = "GetBestSellersReportEndpointHandler" }
     daily_sales_report       = { handler = "GetDailySalesReportEndpointHandler" }
+    sales_overview_report    = { handler = "GetSalesOverviewReportEndpointHandler" }
     low_stock_report         = { handler = "GetLowStockReportEndpointHandler" }
     complete_sale            = { handler = "CompleteSaleEndpointHandler" }
     complete_quote_sale      = { handler = "CompleteQuoteSaleEndpointHandler" }
@@ -64,6 +65,7 @@ locals {
     "PATCH /api/v1/promotions/{id}"       = "update_promotion"
     "GET /api/v1/reports/best-sellers"    = "best_sellers_report"
     "GET /api/v1/reports/daily-sales"     = "daily_sales_report"
+    "GET /api/v1/reports/sales-overview"  = "sales_overview_report"
     "GET /api/v1/reports/low-stock"       = "low_stock_report"
     "GET /api/v1/sales"                   = "list_sales"
     "POST /api/v1/sales"                  = "complete_quote_sale"

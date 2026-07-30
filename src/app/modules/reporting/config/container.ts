@@ -1,7 +1,11 @@
 import { Container } from 'inversify';
-import { ProductVariantRepository } from '@src/app/modules/catalog/application/ports/CatalogRepositories';
+import {
+  ProductRepository,
+  ProductVariantRepository,
+} from '@src/app/modules/catalog/application/ports/CatalogRepositories';
 import { sharedInMemoryCatalogStore } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryCatalogStore';
 import { InMemoryProductVariantRepository } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryProductVariantRepository';
+import { InMemoryProductRepository } from '@src/app/modules/catalog/infrastructure/repositories/in-memory/InMemoryProductRepository';
 import ILogger from '@src/app/core/utils/ILogger';
 import MetricsService from '@src/app/core/utils/MetricsService';
 import PowertoolsLoggerAdapter from '@src/app/core/utils/Logger';
@@ -11,15 +15,18 @@ import { InMemoryInventoryVariantStockGateway } from '@src/app/modules/inventory
 import { DrizzleInventoryVariantStockGateway } from '@src/app/modules/inventory/infrastructure/repositories/drizzle/DrizzleInventoryRepositories';
 import {
   ReportingInventoryReader,
+  ReportingCatalogReader,
   ReportingSalesReader,
 } from '@src/app/modules/reporting/application/ports/ReportingRepositories';
 import { ReportingAuthorizationPolicy } from '@src/app/modules/reporting/application/ports/ReportingServices';
 import { GetBestSellersReportHandler } from '@src/app/modules/reporting/application/queries/GetBestSellersReportHandler';
 import { GetDailySalesReportHandler } from '@src/app/modules/reporting/application/queries/GetDailySalesReportHandler';
 import { GetLowStockReportHandler } from '@src/app/modules/reporting/application/queries/GetLowStockReportHandler';
+import { GetSalesOverviewReportHandler } from '@src/app/modules/reporting/application/queries/GetSalesOverviewReportHandler';
 import { RoleBasedReportingAuthorizationPolicy } from '@src/app/modules/reporting/application/ReportingAuthorizationPolicy';
 import types from '@src/app/modules/reporting/config/types';
 import { InventoryReportingReader } from '@src/app/modules/reporting/infrastructure/services/InventoryReportingReader';
+import { CatalogReportingReader } from '@src/app/modules/reporting/infrastructure/services/CatalogReportingReader';
 import { SalesReportingReader } from '@src/app/modules/reporting/infrastructure/services/SalesReportingReader';
 import { InMemorySaleRepository } from '@src/app/modules/sales/infrastructure/repositories/in-memory/InMemorySaleRepository';
 import { DrizzleSaleRepository } from '@src/app/modules/sales/infrastructure/repositories/drizzle/DrizzleSaleRepository';
@@ -49,6 +56,14 @@ container
   })
   .inSingletonScope();
 container
+  .bind<ReportingCatalogReader>(types.ReportingCatalogReader)
+  .toDynamicValue(() => {
+    const products: ProductRepository = new InMemoryProductRepository(sharedInMemoryCatalogStore);
+    const variants: ProductVariantRepository = new InMemoryProductVariantRepository(sharedInMemoryCatalogStore);
+    return new CatalogReportingReader(products, variants);
+  })
+  .inSingletonScope();
+container
   .bind<GetDailySalesReportHandler>(types.GetDailySalesReportHandler)
   .toDynamicValue(
     (context) =>
@@ -63,7 +78,8 @@ container
     (context) =>
       new GetBestSellersReportHandler(
         context.get<ReportingSalesReader>(types.ReportingSalesReader),
-        context.get<ReportingAuthorizationPolicy>(types.ReportingAuthorizationPolicy)
+        context.get<ReportingAuthorizationPolicy>(types.ReportingAuthorizationPolicy),
+        context.get<ReportingCatalogReader>(types.ReportingCatalogReader)
       )
   );
 container
@@ -72,6 +88,16 @@ container
     (context) =>
       new GetLowStockReportHandler(
         context.get<ReportingInventoryReader>(types.ReportingInventoryReader),
+        context.get<ReportingAuthorizationPolicy>(types.ReportingAuthorizationPolicy),
+        context.get<ReportingCatalogReader>(types.ReportingCatalogReader)
+      )
+  );
+container
+  .bind<GetSalesOverviewReportHandler>(types.GetSalesOverviewReportHandler)
+  .toDynamicValue(
+    (context) =>
+      new GetSalesOverviewReportHandler(
+        context.get<ReportingSalesReader>(types.ReportingSalesReader),
         context.get<ReportingAuthorizationPolicy>(types.ReportingAuthorizationPolicy)
       )
   );

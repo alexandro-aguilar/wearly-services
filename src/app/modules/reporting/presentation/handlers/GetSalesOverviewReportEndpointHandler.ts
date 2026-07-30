@@ -10,14 +10,13 @@ import { responseHandler } from '@src/app/core/middleware/responseHandler';
 import ILogger from '@src/app/core/utils/ILogger';
 import MetricsService from '@src/app/core/utils/MetricsService';
 import TracerService from '@src/app/core/utils/TracerService';
-import { GetBestSellersReportHandler } from '@src/app/modules/reporting/application/queries/GetBestSellersReportHandler';
+import { GetSalesOverviewReportHandler } from '@src/app/modules/reporting/application/queries/GetSalesOverviewReportHandler';
 import container from '@src/app/modules/reporting/config/container';
 import types from '@src/app/modules/reporting/config/types';
-import { BestSellerReport } from '@src/app/modules/reporting/domain/Reports';
+import { SalesOverviewReport } from '@src/app/modules/reporting/domain/Reports';
 
-const getBestSellersReportEndpointHandlerSchema: ValidatorSchemas = {
+const getSalesOverviewReportEndpointHandlerSchema: ValidatorSchemas = {
   queryStringParameters: Joi.object({
-    limit: Joi.number().integer().min(1).max(100).optional(),
     from: Joi.string()
       .pattern(/^\d{4}-\d{2}-\d{2}$/)
       .required(),
@@ -27,25 +26,20 @@ const getBestSellersReportEndpointHandlerSchema: ValidatorSchemas = {
     timeZone: Joi.string().required(),
   }).required(),
 };
-
 const tracer = container.get<TracerService>(types.TracerService).tracer;
 const metrics = container.get<MetricsService>(types.MetricsService).metrics;
 const logger = container.get<ILogger>(types.Logger);
-
 export const handler = middy(
-  async (event: APIGatewayProxyEventV2, context: Context): Promise<APIGatewayProxyResultV2<BestSellerReport>> => {
+  async (event: APIGatewayProxyEventV2, context: Context): Promise<APIGatewayProxyResultV2<SalesOverviewReport>> => {
     logger.addContext({ requestId: context.awsRequestId });
     const principal = await Authorization.authenticate(event.headers);
     const query = event.queryStringParameters!;
-    return container.get<GetBestSellersReportHandler>(types.GetBestSellersReportHandler).execute(principal, {
-      limit: query.limit === undefined ? undefined : Number(query.limit),
-      from: query.from!,
-      to: query.to!,
-      timeZone: query.timeZone!,
-    });
+    return container
+      .get<GetSalesOverviewReportHandler>(types.GetSalesOverviewReportHandler)
+      .execute(principal, { from: query.from!, to: query.to!, timeZone: query.timeZone! });
   }
 )
-  .use(requestValidator(getBestSellersReportEndpointHandlerSchema))
+  .use(requestValidator(getSalesOverviewReportEndpointHandlerSchema))
   .use(requestHandler(metrics))
   .use(logMetrics(metrics, { captureColdStartMetric: true, throwOnEmptyMetrics: false }))
   .use(captureLambdaHandler(tracer))

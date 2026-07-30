@@ -28,10 +28,23 @@ export interface ReportingInventoryProjection {
   readonly active: boolean;
 }
 
+export interface ReportingCatalogProjection {
+  readonly productVariantId: string;
+  readonly productId: string;
+  readonly productName: string;
+  readonly variantName: string;
+  readonly sku: string;
+  readonly barcode?: string;
+}
+
 export interface ReportingSalesReader {
   list(storeId: string): Promise<ReportingSaleProjection[]>;
 }
 
 export interface ReportingInventoryReader {
   listLowStock(storeId: string): Promise<ReportingInventoryProjection[]>;
+}
+
+export interface ReportingCatalogReader {
+  list(storeId: string): Promise<ReportingCatalogProjection[]>;
 }

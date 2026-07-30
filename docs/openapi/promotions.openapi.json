@@ -1,0 +1,235 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Wearly Services Promotions API",
+    "version": "1.0.0",
+    "description": "Implementation-accurate contract for configurable promotions. Successful object responses use the { body: ... } envelope. The PATCH success response is presently not stable; see its operation description."
+  },
+  "paths": {
+    "/api/v1/promotions": {
+      "get": {
+        "summary": "List promotions",
+        "description": "ADMIN and MANAGER receive the store-scoped, priority-sorted list. active=true is intended to list effective promotions for all roles, but currently falls through to the management list because of an implementation bug.",
+        "parameters": [{ "$ref": "#/components/parameters/Active" }],
+        "responses": {
+          "200": {
+            "description": "Promotion list",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PromotionListEnvelope" } } }
+          },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "post": {
+        "summary": "Create a promotion",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreatePromotionRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Created promotion ID",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreatePromotionEnvelope" } } }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/promotions/{id}": {
+      "patch": {
+        "summary": "Update, activate, or deactivate a promotion",
+        "description": "At least one field is required. startsAt and endsAt may be null to clear them. The current Lambda resolves void and does not provide a stable success status/body; clients should refresh the list after update.",
+        "parameters": [{ "$ref": "#/components/parameters/PromotionId" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdatePromotionRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Success response is not stable in the current implementation." },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": { "$ref": "#/components/responses/Error" },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": { "BearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" } },
+    "parameters": {
+      "Active": {
+        "name": "active",
+        "in": "query",
+        "schema": { "type": "boolean" },
+        "description": "Intended active/effective filter. Currently unreliable; see operation description."
+      },
+      "PromotionId": { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+    },
+    "responses": {
+      "Error": {
+        "description": "Stable API error",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      }
+    },
+    "schemas": {
+      "PromotionType": {
+        "type": "string",
+        "enum": ["FIXED_COMBO", "MIXED_COMBO", "PERCENTAGE_DISCOUNT", "BUY_X_GET_Y"]
+      },
+      "PromotionCondition": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["field", "operator", "value"],
+        "properties": {
+          "field": { "type": "string", "enum": ["category", "productId", "variantId", "quantity", "brand"] },
+          "operator": { "type": "string", "enum": ["EQUALS", "IN", "GREATER_THAN_OR_EQUAL"] },
+          "value": {
+            "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "array", "items": { "type": "string" } }]
+          }
+        }
+      },
+      "PromotionAction": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "value"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["SET_FIXED_PRICE", "PERCENTAGE_DISCOUNT", "FIXED_DISCOUNT", "CHEAPEST_ITEM_DISCOUNT"]
+          },
+          "value": { "type": "number", "minimum": 0 }
+        }
+      },
+      "Promotion": {
+        "type": "object",
+        "required": ["id", "storeId", "name", "type", "conditions", "actions", "priority", "active"],
+        "properties": {
+          "id": { "type": "string" },
+          "storeId": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "type": { "$ref": "#/components/schemas/PromotionType" },
+          "conditions": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/components/schemas/PromotionCondition" }
+          },
+          "actions": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": { "$ref": "#/components/schemas/PromotionAction" }
+          },
+          "startsAt": { "type": "string", "format": "date-time" },
+          "endsAt": { "type": "string", "format": "date-time" },
+          "priority": { "type": "integer" },
+          "active": { "type": "boolean" }
+        }
+      },
+      "CreatePromotionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "type", "conditions", "actions", "priority"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": "string" },
+          "type": { "$ref": "#/components/schemas/PromotionType" },
+          "conditions": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/components/schemas/PromotionCondition" }
+          },
+          "actions": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": { "$ref": "#/components/schemas/PromotionAction" }
+          },
+          "startsAt": { "type": "string", "format": "date-time" },
+          "endsAt": { "type": "string", "format": "date-time" },
+          "priority": { "type": "integer" },
+          "active": { "type": "boolean", "default": true }
+        }
+      },
+      "UpdatePromotionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": "string" },
+          "type": { "$ref": "#/components/schemas/PromotionType" },
+          "conditions": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/components/schemas/PromotionCondition" }
+          },
+          "actions": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": { "$ref": "#/components/schemas/PromotionAction" }
+          },
+          "startsAt": { "type": ["string", "null"], "format": "date-time" },
+          "endsAt": { "type": ["string", "null"], "format": "date-time" },
+          "priority": { "type": "integer" },
+          "active": { "type": "boolean" }
+        }
+      },
+      "PromotionListEnvelope": {
+        "type": "object",
+        "required": ["body"],
+        "properties": {
+          "body": {
+            "type": "object",
+            "required": ["promotions"],
+            "properties": { "promotions": { "type": "array", "items": { "$ref": "#/components/schemas/Promotion" } } }
+          }
+        }
+      },
+      "CreatePromotionEnvelope": {
+        "type": "object",
+        "required": ["body"],
+        "properties": { "body": { "type": "object", "required": ["id"], "properties": { "id": { "type": "string" } } } }
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message", "details"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "VALIDATION_ERROR",
+                  "UNAUTHENTICATED",
+                  "FORBIDDEN",
+                  "NOT_FOUND",
+                  "CONFLICT",
+                  "STALE_PRICING",
+                  "INSUFFICIENT_STOCK",
+                  "IDEMPOTENCY_CONFLICT",
+                  "INTERNAL_ERROR"
+                ]
+              },
+              "message": { "type": "string" },
+              "details": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["message"],
+                  "properties": { "field": { "type": "string" }, "message": { "type": "string" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [{ "BearerAuth": [] }]
+}

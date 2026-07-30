@@ -20,7 +20,7 @@ const getDailySalesReportEndpointHandlerSchema: ValidatorSchemas = {
     date: Joi.string()
       .pattern(/^\d{4}-\d{2}-\d{2}$/)
       .required(),
-    timezoneOffsetMinutes: Joi.number().integer().min(-720).max(840).optional(),
+    timeZone: Joi.string().required(),
   }).required(),
 };
 
@@ -34,7 +34,7 @@ export const handler = middy(
     const principal = await Authorization.authenticate(event.headers);
     return container.get<GetDailySalesReportHandler>(types.GetDailySalesReportHandler).execute(principal, {
       date: event.queryStringParameters?.date || '',
-      timezoneOffsetMinutes: Number(event.queryStringParameters?.timezoneOffsetMinutes ?? 0),
+      timeZone: event.queryStringParameters?.timeZone || '',
     });
   }
 )
